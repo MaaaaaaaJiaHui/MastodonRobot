@@ -1,18 +1,27 @@
+def status_post(mastodon, user, message):
+    full_message = "@{} ".format(user["acct"]) + message
+    mastodon.status_post(status=full_message, visibility="direct")
+    print('status post :', full_message)
+    return True
 
-def show_introduction(mastodon):
+def show_introduction(mastodon, user):
     """
     Introduce the bot functions.
     """
     message = "Hello, I'm School Bot, nice to meet you! What do want to know?"
     print(message)
-    return message
+    return status_post(mastodon, user, message)
 
-def school_info():
+def school_info(mastodon, user):
     """
     Display school info, let students choose options
     """
-    message = "What do you want to konw about school?"
-    print(message)
+    message = "What do you want to konw about school? You can check the following links:"
+    message += "\n1. school official website: http://google.com/"
+    message += "\n2. school contact info: http://google.com/"
+    message += "\n3. school newbee info: http://google.com/"
+    message += "\n4. school F&Q: http://google.com/"
+    return status_post(mastodon, user, message)
 
 def school_official_website():
     """

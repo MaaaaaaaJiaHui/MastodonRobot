@@ -33,20 +33,19 @@ class HelloBot(PineappleBot):
 
             # get message
             soup = BeautifulSoup(mention["content"], "html.parser")
-            message = soup.find('p').get_text().strip().split(' ')[-1]
-            # print('read message {}'.format(message))
+            message = soup.find('p').get_text().strip().split(' ')[1:]
+            message = "_".join(message)
+            print('read message {}'.format(message))
 
             # check if the sender has saved messages
 
             # make response based on the message
             if message == 'hello':
-                welcome_message = bot_datacenter.show_introduction(self.mastodon)
-                welcome_full_message = welcome_message + "@{}".format(user["acct"])
-                self.mastodon.status_post(status=welcome_full_message, visibility="direct")
+                bot_datacenter.show_introduction(self.mastodon, user)
 
-            elif message == 'school info':
-                bot_datacenter.school_info()
-            elif message == 'school official website':
+            elif message == 'school_info':
+                bot_datacenter.school_info(self.mastodon, user)
+            elif message == 'school_official_website':
                 bot_datacenter.school_official_website()
             elif message == 'school_info':
                 bot_datacenter.school_info()
@@ -70,5 +69,5 @@ class HelloBot(PineappleBot):
                 bot_datacenter.other_questions()
             else:
                 # if don't understand what he/she say, just display function introduction message
-                bot_datacenter.show_introduction()
+                bot_datacenter.show_introduction(self.mastodon, user)
 
