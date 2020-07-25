@@ -13,6 +13,15 @@ class HelloBot(PineappleBot):
         Do somethin when start the bot.
         """
         logging.info('Start hello bot ...')
+    
+    def on_notification(self, notif):
+        super().on_notification(notif)
+
+        print('收到消息:')
+        print(notif)
+
+        logging.info("Got a {} from {} at {}".format(notif["type"], notif["account"]["username"], notif["created_at"]))
+        notif_type = notif["type"]
 
     @reply
     def test(self, mention, user):
@@ -30,7 +39,6 @@ class HelloBot(PineappleBot):
 
             # get sender
 
-
             # get message
             soup = BeautifulSoup(mention["content"], "html.parser")
             message = soup.find('p').get_text().strip().split(' ')[1:]
@@ -40,34 +48,6 @@ class HelloBot(PineappleBot):
             # check if the sender has saved messages
 
             # make response based on the message
-            if message == 'hello':
-                bot_datacenter.show_introduction(self.mastodon, user)
-
-            elif message == 'school_info':
-                bot_datacenter.school_info(self.mastodon, user)
-            elif message == 'school_official_website':
-                bot_datacenter.school_official_website()
-            elif message == 'school_info':
-                bot_datacenter.school_info()
-            elif message == 'school_official_website':
-                bot_datacenter.school_official_website()
-            elif message == 'school_contact_info':
-                bot_datacenter.school_contact_info()
-            elif message == 'school_newbee_info':
-                bot_datacenter.school_newbee_info()
-            elif message == 'school_f_and_q':
-                bot_datacenter.school_f_and_q()
-            elif message == 'class_info':
-                bot_datacenter.class_info()
-            elif message == 'meeting_book':
-                bot_datacenter.meeting_book()
-            elif message == 'teach_feedback':
-                bot_datacenter.teach_feedback()
-            elif message == 'question_history':
-                bot_datacenter.question_history()
-            elif message == 'other_questions':
-                bot_datacenter.other_questions()
-            else:
-                # if don't understand what he/she say, just display function introduction message
+            if (False == bot_datacenter.select_info(self.mastodon, user, message)):
                 bot_datacenter.show_introduction(self.mastodon, user)
 
