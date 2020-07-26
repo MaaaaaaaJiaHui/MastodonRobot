@@ -25,7 +25,7 @@ SECRET_KEY = '&ushyyra7)0pa(vn_kyxudjnfcf9rx@wo*z#=a(t3@%&7g!2it'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'school_info.apps.SchoolInfoConfig',
 ]
 
 MIDDLEWARE = [
@@ -75,11 +77,17 @@ WSGI_APPLICATION = 'mastodonrobot.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'mastodon_bot',                      # 数据库名称
+        'USER': 'root',                          # 数据库登录用户名
+        'PASSWORD': '',                     # 密码
+        'HOST': '127.0.0.1',                      # 数据库主机IP, 默认为127.0.0.1
+        'PORT': 3306                              # 数据库端口号 , 默认为3306
+        # 'OPTIONS': {
+        #     'read_default_file': os.path.join(BASE_DIR, 'my.cnf'),
+        # }
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -118,3 +126,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
