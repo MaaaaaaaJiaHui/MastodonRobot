@@ -1,12 +1,8 @@
-def select_info(mastodon, user, message):
+def select_info(mastodon, user, message, conn=None):
     if message == 'hello':
         show_introduction(mastodon, user)
     elif message == 'school_info':
-        school_info(mastodon, user)
-    elif message == 'school_official_website':
-        school_official_website()
-    elif message == 'school_info':
-        school_info()
+        school_info(mastodon, user, conn)
     elif message == 'school_official_website':
         school_official_website()
     elif message == 'school_contact_info':
@@ -73,7 +69,6 @@ def status_post(mastodon, user, message, poll_options = None):
             print('select {}'.format(select_info))
             select_info(mastodon, user, selected_option)
 
-
     return True
 
 def show_introduction(mastodon, user):
@@ -92,15 +87,26 @@ def show_introduction(mastodon, user):
 
     return status_post(mastodon, user, message, poll_options)
 
-def school_info(mastodon, user):
+def school_info(mastodon, user, conn):
     """
     Display school info, let students choose options
     """
-    message = "What do you want to konw about school? You can check the following links:"
-    message += "\n1. school official website: http://google.com/"
-    message += "\n2. school contact info: http://google.com/"
-    message += "\n3. school newbee info: http://google.com/"
-    message += "\n4. school F&Q: http://google.com/"
+
+    # read information websites
+    school_info_dict = {}
+    cursor = conn.cursor()
+    sql = "SELECT id, info_name, info_value from school_info_schoolinfo WHERE deleted_at is NULL;"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    for id, info_name, info_value in result:
+        print("info: id is {},name in {}，value is {}".format(id, info_name, info_value))
+        school_info_dict[info_name] = info_value
+
+    message = "What do you want to know about school? You can check the following links:"
+    message += "\n1. school official website: "+school_info_dict["school_official_website"]
+    message += "\n2. school contact info: "+school_info_dict["school_contact_info"]
+    message += "\n3. school newbee info: "+school_info_dict["school_newbie_info"]
+    message += "\n4. school F&Q: "+school_info_dict["school_f_and_q"]
     return status_post(mastodon, user, message)
 
 def school_official_website():

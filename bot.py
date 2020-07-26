@@ -1,5 +1,6 @@
 from ananas import PineappleBot, hourly, schedule, reply, html_strip_tags, daily, interval
 import logging
+import pymysql
 import bot_datacenter
 from bs4 import BeautifulSoup
 
@@ -8,11 +9,17 @@ logger.setLevel(logging.INFO)
 
 class HelloBot(PineappleBot):
 
+    # mysql
+    conn = None
+
     def start(self):
         """
         Do somethin when start the bot.
         """
-        logging.info('Start hello bot ...')
+        logging.info('Start hello bot and init mysql connection ...')
+        self.conn = pymysql.connect(host='localhost', user='root',password='',database='mastodon_bot',charset="utf8")
+
+        print('conn is ', self.conn)
     
     def on_notification(self, notif):
         super().on_notification(notif)
@@ -46,8 +53,9 @@ class HelloBot(PineappleBot):
             print('read message {}'.format(message))
 
             # check if the sender has saved messages
+            print('conn is ', self.conn)
 
             # make response based on the message
-            if (False == bot_datacenter.select_info(self.mastodon, user, message)):
+            if (False == bot_datacenter.select_info(self.mastodon, user, message, conn=self.conn)):
                 bot_datacenter.show_introduction(self.mastodon, user)
 
