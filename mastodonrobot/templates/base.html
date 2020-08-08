@@ -198,13 +198,40 @@
               </p>
             </a>
           </li>
-          <li class="nav-item">
-            <a id="nav-class-info" href="pages/widgets.html" class="nav-link">
+          <li id="nav-class-info-li" class="nav-item has-treeview">
+            <a id="nav-class-info-a" href="{% url 'course_index' %}" class="nav-link">
               <i class="nav-icon fas fa-th"></i>
               <p>
                 Class Info
+                <i class="fas fa-angle-left right"></i>
               </p>
             </a>
+            <ul class="nav nav-treeview">
+              <li class="nav-item">
+                <a id="nav-course" href="{% url 'course_index' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Course</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../forms/advanced.html" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Exam</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../forms/editors.html" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Assignment</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../forms/validation.html" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Score</p>
+                </a>
+              </li>
+            </ul>
           </li>
           <li class="nav-item">
             <a id="nav-teaching-assistant" href="{% url 'teaching_assistant_index' %}" class="nav-link">
@@ -319,6 +346,20 @@
 <script>
     // init the menu
     $('#{{current_nav_id}}').addClass("active");
+
+    let current_nav_id = '#{{current_nav_id}}';
+    if (current_nav_id == '#nav-course' 
+      || current_nav_id == '#nav-exam'
+      || current_nav_id == '#nav-assignment'
+      || current_nav_id == '#nav-score'
+      ) {
+      $(current_nav_id).addClass("active");
+      $("#nav-class-info-li").addClass("menu-open");
+      $("#nav-class-info-a").addClass("active");
+    } else {
+      $(current_nav_id).addClass("active");
+    }
+
 </script>
 
 {% block custom_javascript %}

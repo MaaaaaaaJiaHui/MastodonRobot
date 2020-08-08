@@ -5,7 +5,7 @@ from django.conf import settings
 from django.http import HttpResponse, HttpResponseRedirect
 from django.core.serializers import serialize
 from django.core.exceptions import ValidationError
-from .models import SchoolInfo, TeachingAssistant
+from .models import SchoolInfo, TeachingAssistant, Course, Exam, Assignment, Question, QueryHistory, Teacher
 
 @require_http_methods(["GET","POST"])
 def index(request):
@@ -87,26 +87,6 @@ def teaching_assistant_post(request):
     result = {'status':'success', 'message':'Create success!', 'data':{'table':table}}
     return HttpResponse(json.dumps(result))
 
-
-@require_http_methods(["PUT"])
-def teaching_assistant_put(request, id):
-
-    
-
-    # transfer teaching assistants objects to table data
-    teaching_assistants = TeachingAssistant.objects.all().filter(deleted_at__isnull=True)
-    table = []
-    for teaching_assistant in teaching_assistants:
-        table.append([
-            teaching_assistant.user_name, 
-            teaching_assistant.email,
-            '<button type="button" class="btn btn-default">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(teaching_assistant.id)
-        ])
-
-    result = {'status':'success', 'message':'Create success!', 'data':{'table':table}}
-    return HttpResponse(json.dumps(result))
-
-
 @require_http_methods(["DELETE", "PUT"])
 def teaching_assistant_delete_or_update(request, teaching_assistant_id):
 
@@ -152,6 +132,99 @@ def teaching_assistant_delete_or_update(request, teaching_assistant_id):
             teaching_assistant.user_name, 
             teaching_assistant.email,
             '<button type="button" class="btn btn-default">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(teaching_assistant.id)
+        ])
+
+    result = {'status':'success', 'message':message, 'data':{'table':table}}
+    return HttpResponse(json.dumps(result))
+
+
+@require_http_methods(["GET"])
+def course_index(request):
+    """
+    Display course list page
+    """
+    courses = Course.objects.all().filter(deleted_at__isnull=True)
+
+    content_dict = {}
+    content_dict['courses'] = courses
+    content_dict['current_nav_id'] = 'nav-course'
+    return render(request, 'course/index.html', content_dict)
+
+@require_http_methods(["POST"])
+def course_post(request):
+
+    # get data from inputs
+    course_code = request.POST.get('course_code', None)
+    name = request.POST.get('name', None)
+
+    # check if data illegal
+    if course_code is None or course_code == '':
+        result = {'status':'error', 'message':'Illegal course code!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    if name is None or name == '':
+        result = {'status':'error', 'message':'Illegal name!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+
+    # create new course
+    course = Course.objects.create(course_code=course_code, name=name)
+
+    # transfer courses objects to table data
+    courses = Course.objects.all().filter(deleted_at__isnull=True)
+    table = []
+    for course in courses:
+        table.append([
+            course.course_code, 
+            course.name,
+            '<button type="button" class="btn btn-default">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(course.id)
+        ])
+
+    result = {'status':'success', 'message':'Create success!', 'data':{'table':table}}
+    return HttpResponse(json.dumps(result))
+
+@require_http_methods(["DELETE", "PUT"])
+def course_delete_or_update(request, course_id):
+    # get object
+    course = Course.objects.get(id=course_id, deleted_at__isnull=True)
+
+    # check if data illegal
+    if course is None:
+        result = {'status':'error', 'message':'This course not exists!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    
+    if request.method == 'DELETE':
+        # delete it
+        course.delete()
+        message = 'Delete success!'
+    elif request.method == 'PUT':
+        from django.http import QueryDict
+        put = QueryDict(request.body)
+
+        # get data from inputs
+        course_code = put.get('course_code', None)
+        name = put.get('name', None)
+
+        # check if data illegal
+        if course_code is None or course_code == '':
+            result = {'status':'error', 'message':'Illegal name!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+        if name is None or name == '':
+            result = {'status':'error', 'message':'Illegal name!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+        
+        # update data
+        course.course_code = course_code
+        course.name = name
+        course.save()
+
+        message = 'Update success!'
+
+    courses = Course.objects.all().filter(deleted_at__isnull=True)
+    table = []
+    for course in courses:
+        table.append([
+            course.course_code, 
+            course.name,
+            '<button type="button" class="btn btn-default">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(course.id)
         ])
 
     result = {'status':'success', 'message':message, 'data':{'table':table}}
