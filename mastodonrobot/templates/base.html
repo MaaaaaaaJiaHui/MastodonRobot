@@ -214,19 +214,19 @@
                 </a>
               </li>
               <li class="nav-item">
-                <a href="../forms/advanced.html" class="nav-link">
+                <a id="nav-exam" href="{% url 'exam_index' %}" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Exam</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="../forms/editors.html" class="nav-link">
+                <a id="nav-assignment" href="../forms/editors.html" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Assignment</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="../forms/validation.html" class="nav-link">
+                <a id="nav-score" href="../forms/validation.html" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Score</p>
                 </a>
@@ -237,12 +237,28 @@
             <a id="nav-teaching-assistant" href="{% url 'teaching_assistant_index' %}" class="nav-link">
               <i class="nav-icon fas fa-th"></i>
               <p>
-                Meeting Booking
+                Teaching Assistant
               </p>
             </a>
           </li>
           <li class="nav-item">
-            <a href="pages/widgets.html" class="nav-link">
+            <a id="nav-teacher" href="{% url 'teacher_index' %}" class="nav-link">
+              <i class="nav-icon fas fa-th"></i>
+              <p>
+                Teacher
+              </p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a id="nav-query-history" href="{% url 'query_history_index' %}" class="nav-link">
+              <i class="nav-icon fas fa-th"></i>
+              <p>
+                Query History
+              </p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a id="nav-score" href="{% url 'teaching_assistant_index' %}" class="nav-link">
               <i class="nav-icon fas fa-th"></i>
               <p>
                 Teach Feedback
@@ -250,7 +266,7 @@
             </a>
           </li>
           <li class="nav-item">
-            <a href="pages/widgets.html" class="nav-link">
+            <a id="nav-question" href="{% url 'question_index' %}" class="nav-link">
               <i class="nav-icon fas fa-th"></i>
               <p>
                 Question Collection
