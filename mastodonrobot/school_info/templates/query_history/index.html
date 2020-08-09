@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid">
+  <!-- Small boxes (Stat box) -->
+  <div class="row">
+    <div class="col-md-12">
+      <!-- general form elements -->
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Query History List</h3>
+        </div>
+        <!-- /.card-header -->
+
+        <!-- table -->
+        <div class="card-body">
+          <!-- <button type="button" class="btn btn-success" data-toggle="modal" data-target="#modal-default">Add Question</button> -->
+          <table id="example1" class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Question</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for query_history in query_history_list %}
+              <tr>
+                <td>{{query_history.user_name}}</td>
+                <td>{{query_history.query_content}}</td>
+                <td><button type="button"
+                    class="btn btn-danger" onclick="delete_row({{query_history.id}})">Delete</button></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+
+          </table>
+        </div>
+        <!-- table -->
+      </div>
+      <!-- /.card -->
+    </div>
+  </div>
+  <!-- /.row -->
+</div><!-- /.container-fluid -->
+
+<div class="modal fade" id="modal-sm">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Confirm</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <input type="hidden" name="query_history_id">
+      <div class="modal-body">
+        <p>Do you really want to delete it?</p>
+      </div>
+      <div class="modal-footer justify-content-between">
+        <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
+        <button type="button" class="btn btn-primary" id="delete-teaching-assistant-button">Yes</button>
+      </div>
+    </div>
+    <!-- /.modal-content -->
+  </div>
+  <!-- /.modal-dialog -->
+</div>
+<!-- /.modal -->
+{% endblock %}
+
+{% load static %}
+{% block custom_css %}
+<!-- Font Awesome -->
+<link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
+<!-- Ionicons -->
+<link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+<!-- DataTables -->
+<link rel="stylesheet" href="{% static 'plugins/datatables-bs4/css/dataTables.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'plugins/datatables-responsive/css/responsive.bootstrap4.min.css' %}">
+
+<!-- Toastr -->
+<link rel="stylesheet" href="{% static 'plugins/toastr/toastr.min.css' %}">
+{% endblock %}
+
+{% block custom_javascript %}
+<!-- DataTables -->
+<script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
+<!-- SweetAlert2 -->
+<script src="{% static 'plugins/sweetalert2/sweetalert2.min.js' %}"></script>
+<!-- Toastr -->
+<script src="{% static 'plugins/toastr/toastr.min.js' %}"></script>
+
+<script>
+  let datatable = null;
+  /** init data table */
+  function init_datatable() {
+    console.log('init datatable ...');
+    datatable = $('#example1').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": false,
+      "ordering": true,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
+  }
+  /** init data table */
+
+  // show message or error
+  function show_message(message_type, content) {
+    if (message_type == 'Info') {
+      console.log('display toastr');
+      toastr.success(content);
+    } else {
+      console.log('display toastr');
+      toastr.error(content);
+    }
+  }
+  // show message or error
+
+  // reset table data
+  function reset_tabledata(data) {
+    datatable.clear();
+    datatable.rows.add(data).draw();
+  }
+  // reset table data
+
+  // delete this row
+  function delete_row(id) {
+    // input id to teaching assistant id
+    console.log($("[name='query_history_id']")[0]);
+    $("[name='query_history_id']")[0].value = id;
+
+    // display modal
+    $("#modal-sm").modal("show");
+  }
+  // delete this row
+
+  // init confirm delete row 
+  function init_delete() {
+    console.log('init delete row button ...');
+    $('#delete-teaching-assistant-button').click(function () {
+      // get all inputs, then post and get result
+      let query_history_id = $("[name='query_history_id']")[0].value;
+      // get csrf token
+      let csrfmiddlewaretoken = $("[name='csrfmiddlewaretoken']").val();
+      // get csrf token
+
+      // debug
+      window.console.log('query_history_id=', query_history_id)
+      // debug
+      let data = {
+        csrfmiddlewaretoken: csrfmiddlewaretoken,
+        query_history_id: query_history_id,
+      };
+
+      // the id in example url is zero
+      let example_url = "{% url 'query_history_delete_or_update' 0 %}";
+      let target_url = example_url.substring(0, example_url.length - 1) + query_history_id;
+
+      console.log('example url:', example_url);
+      console.log('target url:', target_url);
+
+      $.ajax({
+        url: target_url,
+        type: "DELETE",
+        headers: {
+          'X-CSRFToken': csrfmiddlewaretoken
+        },
+        data: data,
+        dataType: "json",
+        success: function (data) {
+          let status = data.status;
+          let message = data.message;
+
+          if (status == 'success') {
+            reset_tabledata(data.data.table);
+            $('#modal-sm').modal('toggle');
+            show_message('Info', message);
+          } else {
+            show_message('Error', message);
+          }
+
+        },
+        error: function (jqXHR, textStatus, err) {
+          console.log(arguments);
+          show_message('Error', err);
+        },
+        complete: function (jqXHR, textStatus) {
+          console.log(textStatus);
+          // show_message('Info', 'Done!');
+        },
+        statusCode: {
+          '403': function (jqXHR, textStatus, err) {
+            console.log(arguments);
+            show_message('Error', err);
+          },
+          '400': function (jqXHR, textStatus, err) {
+            console.log(arguments);
+            show_message('Error', err);
+          }
+        }
+      });
+    });
+  }
+  // init confirm delete row 
+
+  // init
+  function init() {
+    console.log('init ...');
+    init_datatable();
+    init_delete();
+  }
+  // init
+
+  init();
+
+</script>
+
+{% endblock %}
