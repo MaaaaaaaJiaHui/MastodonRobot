@@ -67,6 +67,19 @@ class Assignment(BaseSchema):
     def __str__(self):
         return 'course '+self.course_name+' has an assignment '+self.name+' deadline is '+self.deadline_at
 
+class Score(BaseSchema):
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        verbose_name="the related course",
+    )
+    user_id = models.IntegerField()
+    score = models.FloatField()
+    suggestion = models.TextField()
+
+    def __str__(self):
+        return 'course '+self.course_name+' has an assignment '+self.name+' deadline is '+self.deadline_at
+
 class Question(BaseSchema):
     user_id = models.IntegerField()
     user_name = models.CharField(max_length=512)
