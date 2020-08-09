@@ -19,10 +19,14 @@ urlpatterns = [
     path('exam', views.exam_index, name='exam_index'),
     path('exam_post', views.exam_post, name='exam_post'),
 
-    # # assignment
-    # path('assignment/<int:assignment_id>', views.assignment_delete_or_update, name='assignment_delete_or_update'),
-    # path('assignment', views.assignment_index, name='assignment_index'),
-    # path('assignment_post', views.assignment_post, name='assignment_post'),
+    # assignment
+    path('assignment/<int:assignment_id>', views.assignment_delete_or_update, name='assignment_delete_or_update'),
+    path('assignment', views.assignment_index, name='assignment_index'),
+    path('assignment_post', views.assignment_post, name='assignment_post'),
+
+    # score
+    path('score/<int:score_id>', views.score_delete_or_update, name='score_delete_or_update'),
+    path('score', views.score_index, name='score_index'),
 
     # # question
     path('question/<int:question_id>', views.question_delete_or_update, name='question_delete_or_update'),

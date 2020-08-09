@@ -220,13 +220,13 @@
                 </a>
               </li>
               <li class="nav-item">
-                <a id="nav-assignment" href="../forms/editors.html" class="nav-link">
+                <a id="nav-assignment" href="{% url 'assignment_index' %}" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Assignment</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a id="nav-score" href="../forms/validation.html" class="nav-link">
+                <a id="nav-score" href="{% url 'score_index' %}" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Score</p>
                 </a>
@@ -254,14 +254,6 @@
               <i class="nav-icon fas fa-th"></i>
               <p>
                 Query History
-              </p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a id="nav-score" href="{% url 'teaching_assistant_index' %}" class="nav-link">
-              <i class="nav-icon fas fa-th"></i>
-              <p>
-                Teach Feedback
               </p>
             </a>
           </li>

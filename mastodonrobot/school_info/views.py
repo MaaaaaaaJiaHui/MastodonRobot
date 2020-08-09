@@ -1,11 +1,12 @@
 import json
+import datetime
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseRedirect
 from django.core.serializers import serialize
 from django.core.exceptions import ValidationError
-from .models import SchoolInfo, TeachingAssistant, Course, Exam, Assignment, Question, QueryHistory, Teacher
+from .models import SchoolInfo, TeachingAssistant, Course, Exam, Assignment, Question, QueryHistory, Teacher, Score
 
 @require_http_methods(["GET","POST"])
 def index(request):
@@ -230,16 +231,41 @@ def course_delete_or_update(request, course_id):
     result = {'status':'success', 'message':message, 'data':{'table':table}}
     return HttpResponse(json.dumps(result))
 
+def generate_exam_table():
+    """
+    Read all exam data and transfer them for display
+    """
+    # transfer exams objects to table data
+    exams = Exam.objects.all().filter(deleted_at__isnull=True)
+    table = []
+    for exam in exams:
+        if exam.exam_type == 0:
+            display_exam_type = '<span data-exam_type="0">Offline</span>'
+        else:
+            display_exam_type = '<span data-exam_type="1">Online</span>'
+
+        table.append([
+            '<span data-course_id="{}">{}</span>'.format(exam.course.id, exam.course.name),
+            exam.name,
+            exam.description,
+            exam.exam_at.strftime("%Y-%m-%d %H:%M:%S"),
+            display_exam_type,
+            exam.location,
+            exam.url,
+            '<button type="button" class="btn btn-default" onclick="update_row($(this),{})">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(exam.id, exam.id)
+        ])
+    return table
 
 @require_http_methods(["GET"])
 def exam_index(request):
     """
     Display exam list page
     """
-    exams = Exam.objects.all().filter(deleted_at__isnull=True)
+    courses = Course.objects.all().filter(deleted_at__isnull=True)
 
     content_dict = {}
-    content_dict['exams'] = exams
+    content_dict['exams'] = generate_exam_table()
+    content_dict['courses'] = courses
     content_dict['current_nav_id'] = 'nav-exam'
     return render(request, 'exam/index.html', content_dict)
 
@@ -250,9 +276,10 @@ def exam_post(request):
     name = request.POST.get('name', None)
     description = request.POST.get('description', None)
     exam_at = request.POST.get('exam_at', None)
-    exam_type = int(request.POST.get('exam_type', None)) # 0: real; 1: online
+    exam_type = int(request.POST.get('exam_type', None)) # 0: offline; 1: online
     location = request.POST.get('location', None)
     url = request.POST.get('url', None)
+    course_id = request.POST.get('course_id', None)
 
     # check if data illegal
     if name is None or name == '':
@@ -272,24 +299,24 @@ def exam_post(request):
         return HttpResponse(json.dumps(result))
     if url is None:
         url = ''
+    if course_id is None:
+        result = {'status':'error', 'message':'Please select course!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    
+    # transfer datetime
+    exam_at = datetime.datetime.strptime(exam_at, "%Y-%m-%d %H:%M:%S")
+
+    # find course
+    course = Course.objects.get(id=course_id, deleted_at__isnull=True)
+    if course is None:
+        result = {'status':'error', 'message':'This course not exists!', 'data':{}}
+        return HttpResponse(json.dumps(result))
 
     # create new exam
-    exam = Exam.objects.create(name=name, description=description, exam_at=exam_at, exam_type=exam_type, location=location, url=url)
+    exam = Exam.objects.create(course=course, name=name, description=description, exam_at=exam_at, exam_type=exam_type, location=location, url=url)
 
     # transfer exams objects to table data
-    exams = Exam.objects.all().filter(deleted_at__isnull=True)
-    table = []
-    for exam in exams:
-        table.append([
-            exam.name,
-            exam.description,
-            exam.exam_at,
-            exam.exam_type,
-            exam.location,
-            exam.url,
-            '<button type="button" class="btn btn-default">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(exam.id)
-        ])
-
+    table = generate_exam_table()
     result = {'status':'success', 'message':'Create success!', 'data':{'table':table}}
     return HttpResponse(json.dumps(result))
 
@@ -318,6 +345,7 @@ def exam_delete_or_update(request, exam_id):
         exam_type = int(put.get('exam_type', None)) # 0: real; 1: online
         location = put.get('location', None)
         url = put.get('url', None)
+        course_id = int(put.get('course_id', None))
 
         # check if data illegal
         if name is None or name == '':
@@ -337,33 +365,171 @@ def exam_delete_or_update(request, exam_id):
             return HttpResponse(json.dumps(result))
         if url is None:
             url = ''
+        if course_id is None:
+            result = {'status':'error', 'message':'Please select course!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+
+        # transfer datetime
+        exam_at = datetime.datetime.strptime(exam_at, "%Y-%m-%d %H:%M:%S")
+
+        # find course
+        course = Course.objects.get(id=course_id, deleted_at__isnull=True)
+        if course is None:
+            result = {'status':'error', 'message':'This course not exists!', 'data':{}}
+            return HttpResponse(json.dumps(result))
         
         # update data
+        exam.course = course
         exam.name = name
         exam.description = description
         exam.exam_at = exam_at
         exam.exam_type = exam_type
-        exam.exam_type = exam_type
+        exam.location = location
         exam.url = url
         exam.save()
 
         message = 'Update success!'
 
-    exams = Exam.objects.all().filter(deleted_at__isnull=True)
-    table = []
-    for exam in exams:
-        table.append([
-            exam.name,
-            exam.description,
-            exam.exam_at,
-            exam.exam_type,
-            exam.location,
-            exam.url,
-            '<button type="button" class="btn btn-default">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(exam.id)
-        ])
+    table = generate_exam_table()
 
     result = {'status':'success', 'message':message, 'data':{'table':table}}
     return HttpResponse(json.dumps(result))
+
+
+def generate_assignment_table():
+    """
+    Read all exam data and transfer them for display
+    """
+    # transfer exams objects to table data
+    assignments = Assignment.objects.all().filter(deleted_at__isnull=True)
+    table = []
+    for assignment in assignments:
+
+        table.append([
+            '<span data-course_id="{}">{}</span>'.format(assignment.course.id, assignment.course.name),
+            assignment.name,
+            assignment.description,
+            assignment.deadline_at.strftime("%Y-%m-%d %H:%M:%S"),
+            assignment.url,
+            '<button type="button" class="btn btn-default" onclick="update_row($(this),{})">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(assignment.id, assignment.id)
+        ])
+    return table
+
+@require_http_methods(["GET"])
+def assignment_index(request):
+    """
+    Display assignment list page
+    """
+    courses = Course.objects.all().filter(deleted_at__isnull=True)
+    content_dict = {}
+    content_dict['assignments'] = generate_assignment_table()
+    content_dict['courses'] = courses
+    content_dict['current_nav_id'] = 'nav-assignment'
+    return render(request, 'assignment/index.html', content_dict)
+
+@require_http_methods(["POST"])
+def assignment_post(request):
+
+    # get data from inputs
+    name = request.POST.get('name', None)
+    description = request.POST.get('description', None)
+    deadline_at = request.POST.get('deadline_at', None)
+    url = request.POST.get('url', None)
+    course_id = int(request.POST.get('course_id', None))
+
+    # check if data illegal
+    if name is None or name == '':
+        result = {'status':'error', 'message':'Illegal name!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    if description is None or description == '':
+        result = {'status':'error', 'message':'Illegal description!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    if deadline_at is None or deadline_at == '':
+        result = {'status':'error', 'message':'Please input correct assignment time!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    if url is None:
+        url = ''
+    
+    # transfer datetime
+    deadline_at = datetime.datetime.strptime(deadline_at, "%Y-%m-%d %H:%M:%S")
+
+    # find course
+    course = Course.objects.get(id=course_id, deleted_at__isnull=True)
+    if course is None:
+        result = {'status':'error', 'message':'This course not exists!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+
+    # create new assignment
+    assignment = Assignment.objects.create(course=course, name=name, description=description, deadline_at=deadline_at, url=url)
+
+    # transfer assignments objects to table data
+    table = generate_assignment_table()
+
+    result = {'status':'success', 'message':'Create success!', 'data':{'table':table}}
+    return HttpResponse(json.dumps(result))
+
+@require_http_methods(["DELETE", "PUT"])
+def assignment_delete_or_update(request, assignment_id):
+    # get object
+    assignment = Assignment.objects.get(id=assignment_id, deleted_at__isnull=True)
+
+    # check if data illegal
+    if assignment is None:
+        result = {'status':'error', 'message':'This assignment not exists!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    
+    if request.method == 'DELETE':
+        # delete it
+        assignment.delete()
+        message = 'Delete success!'
+    elif request.method == 'PUT':
+        from django.http import QueryDict
+        put = QueryDict(request.body)
+
+        # get data from inputs
+        name = put.get('name', None)
+        description = put.get('description', None)
+        deadline_at = put.get('deadline_at', None)
+        url = put.get('url', None)
+        course_id = int(put.get('course_id', None))
+
+        # check if data illegal
+        if name is None or name == '':
+            result = {'status':'error', 'message':'Illegal name!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+        if description is None or description == '':
+            result = {'status':'error', 'message':'Illegal description!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+        if deadline_at is None or deadline_at == '':
+            result = {'status':'error', 'message':'Please input correct assignment time!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+        if url is None:
+            url = ''
+        
+        # transfer datetime
+        deadline_at = datetime.datetime.strptime(deadline_at, "%Y-%m-%d %H:%M:%S")
+
+        # find course
+        course = Course.objects.get(id=course_id, deleted_at__isnull=True)
+        if course is None:
+            result = {'status':'error', 'message':'This course not exists!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+        
+        # update data
+        assignment.course = course
+        assignment.name = name
+        assignment.description = description
+        assignment.deadline_at = deadline_at
+        assignment.url = url
+        assignment.save()
+
+        message = 'Update success!'
+
+    table = generate_assignment_table()
+
+    result = {'status':'success', 'message':message, 'data':{'table':table}}
+    return HttpResponse(json.dumps(result))
+
 
 @require_http_methods(["GET"])
 def teacher_index(request):
@@ -506,7 +672,7 @@ def query_history_index(request):
 
     content_dict = {}
     content_dict['query_history_list'] = query_history_list
-    content_dict['current_nav_id'] = 'nav-query_history'
+    content_dict['current_nav_id'] = 'nav-query-history'
     return render(request, 'query_history/index.html', content_dict)
 
 @require_http_methods(["DELETE"])
@@ -531,6 +697,46 @@ def query_history_delete_or_update(request, query_history_id):
             query_history.user_id, 
             query_history.query_content,
             '<button type="button" class="btn btn-default">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(query_history.id)
+        ])
+
+    result = {'status':'success', 'message':message, 'data':{'table':table}}
+    return HttpResponse(json.dumps(result))
+
+@require_http_methods(["GET"])
+def score_index(request):
+    """
+    Display score list page
+    """
+    scores = Score.objects.all().filter(deleted_at__isnull=True)
+
+    content_dict = {}
+    content_dict['scores'] = scores
+    content_dict['current_nav_id'] = 'nav-score'
+    return render(request, 'score/index.html', content_dict)
+
+@require_http_methods(["DELETE"])
+def score_delete_or_update(request, score_id):
+    # get object
+    score = Score.objects.get(id=score_id, deleted_at__isnull=True)
+
+    # check if data illegal
+    if score is None:
+        result = {'status':'error', 'message':'This score not exists!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    
+    if request.method == 'DELETE':
+        # delete it
+        score.delete()
+        message = 'Delete success!'
+
+    scores = Score.objects.all().filter(deleted_at__isnull=True)
+    table = []
+    for score in scores:
+        table.append([
+            score.user_id, 
+            score.score,
+            score.suggestion,
+            '<button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(score.id)
         ])
 
     result = {'status':'success', 'message':message, 'data':{'table':table}}

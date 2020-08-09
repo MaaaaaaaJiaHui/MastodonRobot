@@ -8,30 +8,28 @@
       <!-- general form elements -->
       <div class="card card-primary">
         <div class="card-header">
-          <h3 class="card-title">Exams</h3>
+          <h3 class="card-title">Assignments</h3>
         </div>
         <!-- /.card-header -->
 
         <!-- table -->
         <div class="card-body">
-          <button type="button" class="btn btn-success" data-toggle="modal" data-target="#modal-default">Add Exam</button>
-          <table id="example1" class="table table-bordered table-striped">
+          <button type="button" class="btn btn-success" data-toggle="modal" data-target="#modal-default">Add Assignment</button>
+          <table id="assignmentple1" class="table table-bordered table-striped">
             <thead>
               <tr>
                 <th>Course</th>
                 <th>Name</th>
                 <th>Description</th>
-                <th>Exam Time</th>
-                <th>Exam Type</th>
-                <th>Location</th>
+                <th>Deadline</th>
                 <th>Info</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {% for exam in exams %}
+              {% for assignment in assignments %}
               <tr>
-                {% for column in exam %}
+                {% for column in assignment %}
                 {% autoescape off %}
                 <td>{{ column }}</td>
                 {% endautoescape %}
@@ -54,7 +52,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h4 class="modal-title">Add Exam</h4>
+        <h4 class="modal-title">Add assignment</h4>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -78,32 +76,15 @@
           <input type="text" class="form-control" placeholder="" name="description">
         </div>
         <div class="form-group">
-          <label>Exam Time</label>
-          <div class="input-group date" id="exam_at" data-target-input="nearest">
-            <input type="text" class="form-control datetimepicker-input" data-target="#exam_at" name="exam_at"/>
-            <div class="input-group-append" data-target="#exam_at" data-toggle="datetimepicker">
+          <label>Deadline</label>
+          <div class="input-group date" id="deadline_at" data-target-input="nearest">
+            <input type="text" class="form-control datetimepicker-input" data-target="#deadline_at" name="deadline_at"/>
+            <div class="input-group-append" data-target="#deadline_at" data-toggle="datetimepicker">
                 <div class="input-group-text"><i class="fa fa-calendar"></i></div>
             </div>
         </div>
         </div>
-        <div class="form-group">
-          <label>Exam Type</label>
-          <div>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="exam_type" value="0">
-              <label class="form-check-label">Offline</label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="exam_type" value="1">
-              <label class="form-check-label">Online</label>
-            </div>
-          </div>
 
-        </div>
-        <div class="form-group">
-          <label>Location</label>
-          <input type="text" class="form-control" placeholder="" name="location">
-        </div>
         <div class="form-group">
           <label>Info Online Page URL</label>
           <input type="text" class="form-control" placeholder="" name="url">
@@ -111,7 +92,7 @@
       </div>
       <div class="modal-footer justify-content-between">
         <button id="quit-modal" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-        <button id="save-exam-button" type="button" class="btn btn-primary">Save</button>
+        <button id="save-assignment-button" type="button" class="btn btn-primary">Save</button>
       </div>
     </div>
     <!-- /.modal-content -->
@@ -132,7 +113,7 @@
       </div>
       <div class="modal-body">
         {% csrf_token %}
-        <input type="hidden" name="update_exam_id">
+        <input type="hidden" name="update_assignment_id">
         <div class="form-group">
           <label>Course</label>
           <select name="update_course_id" class="form-control" required="required">
@@ -151,32 +132,15 @@
         </div>
 
         <div class="form-group">
-          <label>Exam Time</label>
-          <div class="input-group date" id="update_exam_at" data-target-input="nearest">
-            <input type="text" class="form-control datetimepicker-input" data-target="#update_exam_at" name="update_exam_at"/>
-            <div class="input-group-append" data-target="#update_exam_at" data-toggle="datetimepicker">
+          <label>Deadline</label>
+          <div class="input-group date" id="update_deadline_at" data-target-input="nearest">
+            <input type="text" class="form-control datetimepicker-input" data-target="#update_deadline_at" name="update_deadline_at"/>
+            <div class="input-group-append" data-target="#update_deadline_at" data-toggle="datetimepicker">
                 <div class="input-group-text"><i class="fa fa-calendar"></i></div>
             </div>
         </div>
         </div>
-        <div class="form-group">
-          <label>Exam Type</label>
-          <div>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="update_exam_type" value="0">
-              <label class="form-check-label">Offline</label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="update_exam_type" value="1">
-              <label class="form-check-label">Online</label>
-            </div>
-          </div>
 
-        </div>
-        <div class="form-group">
-          <label>Location</label>
-          <input type="text" class="form-control" placeholder="" name="update_location">
-        </div>
         <div class="form-group">
           <label>Info Online Page URL</label>
           <input type="text" class="form-control" placeholder="" name="update_url">
@@ -184,7 +148,7 @@
       </div>
       <div class="modal-footer justify-content-between">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-        <button id="update-exam-button" type="button" class="btn btn-primary">Save</button>
+        <button id="update-assignment-button" type="button" class="btn btn-primary">Save</button>
       </div>
     </div>
     <!-- /.modal-content -->
@@ -202,13 +166,13 @@
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
-      <input type="hidden" name="exam_id">
+      <input type="hidden" name="assignment_id">
       <div class="modal-body">
         <p>Do you really want to delete it?</p>
       </div>
       <div class="modal-footer justify-content-between">
         <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
-        <button type="button" class="btn btn-primary" id="delete-exam-button">Yes</button>
+        <button type="button" class="btn btn-primary" id="delete-assignment-button">Yes</button>
       </div>
     </div>
     <!-- /.modal-content -->
@@ -248,7 +212,7 @@
   /** init data table */
   function init_datatable() {
     console.log('init datatable ...');
-    datatable = $('#example1').DataTable({
+    datatable = $('#assignmentple1').DataTable({
       "paging": true,
       "lengthChange": false,
       "searching": false,
@@ -262,7 +226,7 @@
 
   // init datetime picker
   function init_datetime_picker() {
-    $("#exam_at").datetimepicker({
+    $("#deadline_at").datetimepicker({
       icons: {
           time: "fa fa-clock",
           date: "fa fa-calendar",
@@ -272,7 +236,7 @@
       format: "YYYY-MM-DD HH:mm:ss"
     });
 
-    $("#update_exam_at").datetimepicker({
+    $("#update_deadline_at").datetimepicker({
       icons: {
           time: "fa fa-clock",
           date: "fa fa-calendar",
@@ -306,8 +270,8 @@
   // delete this row
   function delete_row(id) {
     // input id to teaching assistant id
-    console.log($("[name='exam_id']")[0]);
-    $("[name='exam_id']")[0].value = id;
+    console.log($("[name='assignment_id']")[0]);
+    $("[name='assignment_id']")[0].value = id;
 
     // display modal
     $("#modal-sm").modal("show");
@@ -317,29 +281,19 @@
   // update this row
   function update_row(button, id) {
     // input id to teaching assistant id
-    $("[name='update_exam_id']")[0].value = id;
-    console.log($("[name='update_exam_id']")[0]);
+    $("[name='update_assignment_id']")[0].value = id;
+    console.log($("[name='update_assignment_id']")[0]);
 
     let row = button.parent().parent(':first').children();
     let course_id = row.eq(0).children(":first").attr("data-course_id");
     $("[name='update_name']")[0].value = row.eq(1).text();
     $("[name='update_description']")[0].value = row.eq(2).text();
-    $("[name='update_exam_at']")[0].value = row.eq(3).text();
-    let exam_type = row.eq(4).text();
-    $("[name='update_location']")[0].value = row.eq(5).text();
-    $("[name='update_url']")[0].value = row.eq(6).text();
+    $("[name='update_deadline_at']")[0].value = row.eq(3).text();
+    $("[name='update_url']")[0].value = row.eq(4).text();
 
     // select course
     console.log('update course id: ', course_id);
     $("[name='update_course_id']").val(course_id);
-
-
-    // select exam type
-    if (exam_type == 'Online') {
-      $("[name='update_exam_type'][value='1']").prop("checked",true);
-    } else {
-      $("[name='update_exam_type'][value='0']").prop("checked",true);
-    }
 
     // display modal
     $("#modal-update").modal("show");
@@ -349,26 +303,26 @@
   // init confirm delete row 
   function init_delete() {
     console.log('init delete row button ...');
-    $('#delete-exam-button').click(function () {
+    $('#delete-assignment-button').click(function () {
       // get all inputs, then post and get result
-      let exam_id = $("[name='exam_id']")[0].value;
+      let assignment_id = $("[name='assignment_id']")[0].value;
       // get csrf token
       let csrfmiddlewaretoken = $("[name='csrfmiddlewaretoken']").val();
       // get csrf token
 
       // debug
-      window.console.log('exam_id=', exam_id)
+      window.console.log('assignment_id=', assignment_id)
       // debug
       let data = {
         csrfmiddlewaretoken: csrfmiddlewaretoken,
-        exam_id: exam_id,
+        assignment_id: assignment_id,
       };
 
-      // the id in example url is zero
-      let example_url = "{% url 'exam_delete_or_update' 0 %}";
-      let target_url = example_url.substring(0, example_url.length - 1) + exam_id;
+      // the id in assignmentple url is zero
+      let assignmentple_url = "{% url 'assignment_delete_or_update' 0 %}";
+      let target_url = assignmentple_url.substring(0, assignmentple_url.length - 1) + assignment_id;
 
-      console.log('example url:', example_url);
+      console.log('assignmentple url:', assignmentple_url);
       console.log('target url:', target_url);
 
       $.ajax({
@@ -418,15 +372,13 @@
   // init update row 
   function init_update() {
     console.log('init update row button ...');
-    $('#update-exam-button').click(function () {
+    $('#update-assignment-button').click(function () {
       // get all inputs, then post and get result
-      let exam_id = $("[name='update_exam_id']")[0].value;
+      let assignment_id = $("[name='update_assignment_id']")[0].value;
       let course_id = $("[name='update_course_id']").val();
       let name = $("[name='update_name']")[0].value;
       let description = $("[name='update_description']")[0].value;
-      let exam_at = $("[name='update_exam_at']")[0].value;
-      let exam_type = $("[name='update_exam_type']:checked").val();
-      let location = $("[name='update_location']")[0].value;
+      let deadline_at = $("[name='update_deadline_at']")[0].value;
       let url = $("[name='update_url']")[0].value;
 
       // get csrf token
@@ -434,25 +386,23 @@
       // get csrf token
 
       // debug
-      window.console.log('exam_id=', exam_id)
+      window.console.log('assignment_id=', assignment_id)
       // debug
       let data = {
         csrfmiddlewaretoken: csrfmiddlewaretoken,
-        exam_id: exam_id,
+        assignment_id: assignment_id,
         course_id: course_id,
         name: name,
         description: description,
-        exam_at: exam_at,
-        exam_type: exam_type,
-        location: location,
+        deadline_at: deadline_at,
         url: url
       };
 
-      // the id in example url is zero
-      let example_url = "{% url 'exam_delete_or_update' 0 %}";
-      let target_url = example_url.substring(0, example_url.length - 1) + exam_id;
+      // the id in assignmentple url is zero
+      let assignmentple_url = "{% url 'assignment_delete_or_update' 0 %}";
+      let target_url = assignmentple_url.substring(0, assignmentple_url.length - 1) + assignment_id;
 
-      console.log('example url:', example_url);
+      console.log('assignmentple url:', assignmentple_url);
       console.log('target url:', target_url);
 
       $.ajax({
@@ -503,14 +453,12 @@
   // init add new row
   function init_add_new_row() {
     console.log('init add new row button ...');
-    $('#save-exam-button').click(function () {
+    $('#save-assignment-button').click(function () {
       // get all inputs, then post and get result
       let course_id = $("[name='course_id']").val();
       let name = $("[name='name']")[0].value;
       let description = $("[name='description']")[0].value;
-      let exam_at = $("[name='exam_at']")[0].value;
-      let exam_type = $("[name='exam_type']:checked").val();
-      let location = $("[name='location']")[0].value;
+      let deadline_at = $("[name='deadline_at']")[0].value;
       let url = $("[name='url']")[0].value;
 
       // get csrf token
@@ -522,21 +470,19 @@
         course_id: course_id,
         name: name,
         description: description,
-        exam_at: exam_at,
-        exam_type: exam_type,
-        location: location,
+        deadline_at: deadline_at,
         url: url
       };
 
       // debug
-      console.log('add exam:', data);
+      console.log('add assignment:', data);
       // debug
 
       // get all inputs, then post and get result
       // if error, just show errors
       // if success, just show tables
       $.ajax({
-        url: "{% url 'exam_post' %}",
+        url: "{% url 'assignment_post' %}",
         type: "POST",
         data: data,
         dataType: "json",
