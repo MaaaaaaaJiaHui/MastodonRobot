@@ -9,6 +9,11 @@ urlpatterns = [
     path('teaching_assistant', views.teaching_assistant_index, name='teaching_assistant_index'),
     path('teaching_assistant_post', views.teaching_assistant_post, name='teaching_assistant_post'),
 
+    # course template
+    path('course_template/<int:course_template_id>', views.course_template_delete_or_update, name='course_template_delete_or_update'),
+    path('course_template', views.course_template_index, name='course_template_index'),
+    path('course_template_post', views.course_template_post, name='course_template_post'),
+
     # course
     path('course/<int:course_id>', views.course_delete_or_update, name='course_delete_or_update'),
     path('course', views.course_index, name='course_index'),
@@ -18,6 +23,7 @@ urlpatterns = [
     path('exam/<int:exam_id>', views.exam_delete_or_update, name='exam_delete_or_update'),
     path('exam', views.exam_index, name='exam_index'),
     path('exam_post', views.exam_post, name='exam_post'),
+
 
     # assignment
     path('assignment/<int:assignment_id>', views.assignment_delete_or_update, name='assignment_delete_or_update'),

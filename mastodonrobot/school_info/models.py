@@ -28,9 +28,33 @@ class SchoolInfo(BaseSchema):
     def __str__(self):
         return self.info_name+':'+self.info_value
 
-class Course(BaseSchema):
+class CourseTemplate(BaseSchema):
     course_code = models.CharField(max_length=64)
     name = models.CharField(max_length=512)
+
+
+class Teacher(BaseSchema):
+    user_name = models.CharField(max_length=512)
+    email = models.CharField(max_length=512)
+
+    def __str__(self):
+        return 'teacher '+self.user_name+')\'s email is '+self.email
+
+class Course(BaseSchema):
+    course_template = models.ForeignKey(
+        CourseTemplate,
+        on_delete=models.CASCADE,
+        verbose_name="the related course template",
+    )
+    grade = models.CharField(max_length=64)
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+        verbose_name="the related teacher"
+    )
+
+    def __str__(self):
+        return 'course {}(code is {}), teacher {} is teaching grade {}'.format(self.course_template.name, self.course_template.course_code, self.teacher.name, self.grade)
 
     def __str__(self):
         return 'course '+self.name+' code is '+self.course_code
@@ -101,10 +125,3 @@ class TeachingAssistant(BaseSchema):
 
     def __str__(self):
         return 'teaching assistant '+self.user_name+')\'s email is '+self.email
-
-class Teacher(BaseSchema):
-    user_name = models.CharField(max_length=512)
-    email = models.CharField(max_length=512)
-
-    def __str__(self):
-        return 'teacher '+self.user_name+')\'s email is '+self.email

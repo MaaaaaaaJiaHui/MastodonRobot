@@ -208,6 +208,12 @@
             </a>
             <ul class="nav nav-treeview">
               <li class="nav-item">
+                <a id="nav-course-template" href="{% url 'course_template_index' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Course Template</p>
+                </a>
+              </li>
+              <li class="nav-item">
                 <a id="nav-course" href="{% url 'course_index' %}" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Course</p>
@@ -357,6 +363,7 @@
 
     let current_nav_id = '#{{current_nav_id}}';
     if (current_nav_id == '#nav-course' 
+      || current_nav_id == '#nav-course-template'
       || current_nav_id == '#nav-exam'
       || current_nav_id == '#nav-assignment'
       || current_nav_id == '#nav-score'

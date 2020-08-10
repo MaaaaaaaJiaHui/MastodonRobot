@@ -20,16 +20,19 @@
               <tr>
                 <th>Course Code</th>
                 <th>Name</th>
+                <th>Grade</th>
+                <th>Teacher</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {% for course in courses %}
               <tr>
-                <td>{{course.course_code}}</td>
-                <td>{{course.name}}</td>
-                <td><button type="button" class="btn btn-default" onclick="update_row($(this), {{course.id}})">Edit</button> <button type="button"
-                    class="btn btn-danger" onclick="delete_row({{course.id}})">Delete</button></td>
+                {% for column in course %}
+                {% autoescape off %}
+                <td>{{ column }}</td>
+                {% endautoescape %}
+                {% endfor %}
               </tr>
               {% endfor %}
             </tbody>
@@ -56,12 +59,24 @@
       <div class="modal-body">
         {% csrf_token %}
         <div class="form-group">
-          <label>Course Code</label>
-          <input type="text" class="form-control" placeholder="" name="course_code">
+          <label>Course Template</label>
+          <select name="course_template_id" class="form-control">
+            {% for course_template in course_templates %}
+            <option value="{{course_template.id}}">{{course_template.name}} ({{course_template.course_code}})</option>
+            {% endfor %}
+          </select>
         </div>
         <div class="form-group">
-          <label>Name</label>
-          <input type="text" class="form-control" placeholder="" name="name">
+          <label>Grade</label>
+          <input type="text" class="form-control" placeholder="" name="grade">
+        </div>
+        <div class="form-group">
+          <label>Teacher</label>
+          <select name="teacher_id" class="form-control">
+            {% for teacher in teachers %}
+            <option value="{{teacher.id}}">{{teacher.user_name}}</option>
+            {% endfor %}
+          </select>
         </div>
       </div>
       <div class="modal-footer justify-content-between">
@@ -89,12 +104,24 @@
         {% csrf_token %}
         <input type="hidden" name="update_course_id">
         <div class="form-group">
-          <label>Course Code</label>
-          <input type="text" class="form-control" placeholder="" name="update_course_code">
+          <label>Course Template</label>
+          <select name="update_course_template_id" class="form-control">
+            {% for course_template in course_templates %}
+            <option value="{{course_template.id}}">{{course_template.name}} ({{course_template.course_code}})</option>
+            {% endfor %}
+          </select>
         </div>
         <div class="form-group">
-          <label>Name</label>
-          <input type="text" class="form-control" placeholder="" name="update_name">
+          <label>Grade</label>
+          <input type="text" class="form-control" placeholder="" name="update_grade">
+        </div>
+        <div class="form-group">
+          <label>Teacher</label>
+          <select name="update_teacher_id" class="form-control">
+            {% for teacher in teachers %}
+            <option value="{{teacher.id}}">{{teacher.user_name}}</option>
+            {% endfor %}
+          </select>
         </div>
       </div>
       <div class="modal-footer justify-content-between">
@@ -211,8 +238,15 @@
     // input id to teaching assistant id
     console.log($("[name='update_course_id']")[0]);
     $("[name='update_course_id']")[0].value = id;
-    $("[name='update_course_code']")[0].value = button.parent().parent(':first').children(':first').text();
-    $("[name='update_name']")[0].value = button.parent().parent(':first').children().eq(1).text();
+
+    let row = button.parent().parent(':first').children();
+    let course_template_id = row.eq(0).children(":first").attr("data-course_template_id");
+    let grade = row.eq(2).text();
+    let teacher_id = row.eq(3).children(":first").attr("data-teacher_id");
+
+    $("[name='update_course_template_id']").val(course_template_id);
+    $("[name='update_grade']").val(grade);
+    $("[name='update_teacher_id']").val(teacher_id);
 
     // display modal
     $("#modal-update").modal("show");
@@ -294,22 +328,25 @@
     $('#update-teaching-assistant-button').click(function () {
       // get all inputs, then post and get result
       let course_id = $("[name='update_course_id']")[0].value;
-      let course_code = $("[name='update_course_code']")[0].value;
-      let name = $("[name='update_name']")[0].value;
 
+      // get all inputs, then post and get result
+      let course_template_id = $("[name='update_course_template_id']").val();
+      let grade = $("[name='update_grade']")[0].value;
+      let teacher_id = $("[name='update_teacher_id']").val();
       // get csrf token
       let csrfmiddlewaretoken = $("[name='csrfmiddlewaretoken']").val();
       // get csrf token
 
-      // debug
-      window.console.log('course_id=', course_id)
-      // debug
       let data = {
         csrfmiddlewaretoken: csrfmiddlewaretoken,
         course_id: course_id,
-        course_code: course_code,
-        name: name,
+        course_template_id: course_template_id,
+        grade: grade,
+        teacher_id: teacher_id
       };
+      // debug
+      window.console.log('data=', data)
+      // debug
 
       // the id in example url is zero
       let example_url = "{% url 'course_delete_or_update' 0 %}";
@@ -368,21 +405,22 @@
     console.log('init add new row button ...');
     $('#save-teaching-assistant-button').click(function () {
       // get all inputs, then post and get result
-      let course_code = $("[name='course_code']")[0].value;
-      let name = $("[name='name']")[0].value;
+      let course_template_id = $("[name='course_template_id']").val();
+      let grade = $("[name='grade']")[0].value;
+      let teacher_id = $("[name='teacher_id']").val();
       // get csrf token
       let csrfmiddlewaretoken = $("[name='csrfmiddlewaretoken']").val();
       // get csrf token
 
-      // debug
-      window.console.log('course_code=', course_code)
-      window.console.log('name=', name)
-      // debug
       let data = {
         csrfmiddlewaretoken: csrfmiddlewaretoken,
-        course_code: course_code,
-        name: name
+        course_template_id: course_template_id,
+        grade: grade,
+        teacher_id: teacher_id
       };
+      // debug
+      window.console.log('data=', data)
+      // debug
 
       // get all inputs, then post and get result
       // if error, just show errors

@@ -65,7 +65,7 @@
           <label>Course</label>
           <select name="course_id" class="form-control" required="required">
             {% for course in courses %}
-            <option value="{{course.id}}">{{course.name}}</option>
+            <option value="{{course.id}}">{{course.course_template.name}}({{course.course_template.course_code}})-{{course.grade}}</option>
             {% endfor %}
           </select>
         </div>
@@ -137,7 +137,7 @@
           <label>Course</label>
           <select name="update_course_id" class="form-control" required="required">
             {% for course in courses %}
-            <option value="{{course.id}}">{{course.name}}</option>
+            <option value="{{course.id}}">{{course.course_template.name}}({{course.course_template.course_code}})-{{course.grade}}</option>
             {% endfor %}
           </select>
         </div>

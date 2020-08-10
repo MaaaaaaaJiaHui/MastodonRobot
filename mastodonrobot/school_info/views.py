@@ -6,7 +6,7 @@ from django.conf import settings
 from django.http import HttpResponse, HttpResponseRedirect
 from django.core.serializers import serialize
 from django.core.exceptions import ValidationError
-from .models import SchoolInfo, TeachingAssistant, Course, Exam, Assignment, Question, QueryHistory, Teacher, Score
+from .models import SchoolInfo, TeachingAssistant, Course, Exam, Assignment, Question, QueryHistory, Teacher, Score, CourseTemplate
 
 @require_http_methods(["GET","POST"])
 def index(request):
@@ -139,20 +139,30 @@ def teaching_assistant_delete_or_update(request, teaching_assistant_id):
     return HttpResponse(json.dumps(result))
 
 
-@require_http_methods(["GET"])
-def course_index(request):
-    """
-    Display course list page
-    """
-    courses = Course.objects.all().filter(deleted_at__isnull=True)
+def generate_course_template_table():
+    # transfer course_templates objects to table data
+    course_templates = CourseTemplate.objects.all().filter(deleted_at__isnull=True)
+    table = []
+    for course_template in course_templates:
+        table.append([
+            course_template.course_code, 
+            course_template.name,
+            '<button type="button" class="btn btn-default" onclick="update_row($(this),{})">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(course_template.id, course_template.id)
+        ])
+    return table
 
+@require_http_methods(["GET"])
+def course_template_index(request):
+    """
+    Display course_template list page
+    """
     content_dict = {}
-    content_dict['courses'] = courses
-    content_dict['current_nav_id'] = 'nav-course'
-    return render(request, 'course/index.html', content_dict)
+    content_dict['course_templates'] = generate_course_template_table()
+    content_dict['current_nav_id'] = 'nav-course-template'
+    return render(request, 'course_template/index.html', content_dict)
 
 @require_http_methods(["POST"])
-def course_post(request):
+def course_template_post(request):
 
     # get data from inputs
     course_code = request.POST.get('course_code', None)
@@ -160,25 +170,129 @@ def course_post(request):
 
     # check if data illegal
     if course_code is None or course_code == '':
-        result = {'status':'error', 'message':'Illegal course code!', 'data':{}}
+        result = {'status':'error', 'message':'Illegal course_template code!', 'data':{}}
         return HttpResponse(json.dumps(result))
     if name is None or name == '':
         result = {'status':'error', 'message':'Illegal name!', 'data':{}}
         return HttpResponse(json.dumps(result))
 
-    # create new course
-    course = Course.objects.create(course_code=course_code, name=name)
+    # create new course_template
+    course_template = CourseTemplate.objects.create(course_code=course_code, name=name)
 
+    # transfer course_templates objects to table data
+    table = generate_course_template_table()
+    result = {'status':'success', 'message':'Create success!', 'data':{'table':table}}
+    return HttpResponse(json.dumps(result))
+
+@require_http_methods(["DELETE", "PUT"])
+def course_template_delete_or_update(request, course_template_id):
+    # get object
+    course_template = CourseTemplate.objects.get(id=course_template_id, deleted_at__isnull=True)
+
+    # check if data illegal
+    if course_template is None:
+        result = {'status':'error', 'message':'This course_template not exists!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    
+    if request.method == 'DELETE':
+        # delete it
+        course_template.delete()
+        message = 'Delete success!'
+    elif request.method == 'PUT':
+        from django.http import QueryDict
+        put = QueryDict(request.body)
+
+        # get data from inputs
+        course_code = put.get('course_code', None)
+        name = put.get('name', None)
+
+        # check if data illegal
+        if course_code is None or course_code == '':
+            result = {'status':'error', 'message':'Illegal name!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+        if name is None or name == '':
+            result = {'status':'error', 'message':'Illegal name!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+        
+        # update data
+        course_template.course_code = course_code
+        course_template.name = name
+        course_template.save()
+
+        message = 'Update success!'
+
+    table = generate_course_template_table()
+    result = {'status':'success', 'message':message, 'data':{'table':table}}
+    return HttpResponse(json.dumps(result))
+
+
+def generate_course_table():
     # transfer courses objects to table data
     courses = Course.objects.all().filter(deleted_at__isnull=True)
     table = []
     for course in courses:
         table.append([
-            course.course_code, 
-            course.name,
-            '<button type="button" class="btn btn-default">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(course.id)
+            '<span data-course_template_id="{}">{}</span>'.format(course.course_template.id, course.course_template.course_code),
+            course.course_template.name,
+            course.grade,
+            '<span data-teacher_id="{}">{}</span>'.format(course.teacher.id, course.teacher.user_name),
+            '<button type="button" class="btn btn-default" onclick="update_row($(this),{})">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(course.id, course.id)
         ])
+    return table
 
+@require_http_methods(["GET"])
+def course_index(request):
+    """
+    Display course list page
+    """
+    course_templates = CourseTemplate.objects.all().filter(deleted_at__isnull=True)
+    teachers = Teacher.objects.all().filter(deleted_at__isnull=True)
+    content_dict = {}
+    content_dict['courses'] = generate_course_table()
+    content_dict['course_templates'] = course_templates
+    content_dict['teachers'] = teachers
+    content_dict['current_nav_id'] = 'nav-course'
+    return render(request, 'course/index.html', content_dict)
+
+@require_http_methods(["POST"])
+def course_post(request):
+
+    # get data from inputs
+    grade = request.POST.get('grade', None)
+    course_template_id = request.POST.get('course_template_id', None)
+    teacher_id = request.POST.get('teacher_id', None)
+
+    # check if data illegal
+    if grade is None or grade == '':
+        result = {'status':'error', 'message':'Illegal grade!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    if course_template_id is None or course_template_id == '':
+        result = {'status':'error', 'message':'Illegal course template!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    if teacher_id is None or teacher_id == '':
+        result = {'status':'error', 'message':'Illegal teacher!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    
+    course_template_id = int(course_template_id)
+    teacher_id = int(teacher_id)
+    
+    # find course template
+    course_template = CourseTemplate.objects.get(id=course_template_id, deleted_at__isnull=True)
+    if course_template is None:
+        result = {'status':'error', 'message':'This course not exists!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+    
+    # find teacher
+    teacher = Teacher.objects.get(id=teacher_id, deleted_at__isnull=True)
+    if teacher is None:
+        result = {'status':'error', 'message':'This teacher not exists!', 'data':{}}
+        return HttpResponse(json.dumps(result))
+
+    # create new course
+    course = Course.objects.create(grade=grade, course_template=course_template, teacher=teacher)
+
+    # transfer courses objects to table data
+    table = generate_course_table()
     result = {'status':'success', 'message':'Create success!', 'data':{'table':table}}
     return HttpResponse(json.dumps(result))
 
@@ -201,33 +315,45 @@ def course_delete_or_update(request, course_id):
         put = QueryDict(request.body)
 
         # get data from inputs
-        course_code = put.get('course_code', None)
-        name = put.get('name', None)
+        grade = put.get('grade', None)
+        course_template_id = put.get('course_template_id', None)
+        teacher_id = put.get('teacher_id', None)
 
         # check if data illegal
-        if course_code is None or course_code == '':
-            result = {'status':'error', 'message':'Illegal name!', 'data':{}}
+        if grade is None or grade == '':
+            result = {'status':'error', 'message':'Illegal grade!', 'data':{}}
             return HttpResponse(json.dumps(result))
-        if name is None or name == '':
-            result = {'status':'error', 'message':'Illegal name!', 'data':{}}
+        if course_template_id is None or course_template_id == '':
+            result = {'status':'error', 'message':'Illegal course template!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+        if teacher_id is None or teacher_id == '':
+            result = {'status':'error', 'message':'Illegal teacher!', 'data':{}}
             return HttpResponse(json.dumps(result))
         
+        course_template_id = int(course_template_id)
+        teacher_id = int(teacher_id)
+        
+        # find course template
+        course_template = CourseTemplate.objects.get(id=course_template_id, deleted_at__isnull=True)
+        if course_template is None:
+            result = {'status':'error', 'message':'This course not exists!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+        
+        # find teacher
+        teacher = Teacher.objects.get(id=teacher_id, deleted_at__isnull=True)
+        if teacher is None:
+            result = {'status':'error', 'message':'This teacher not exists!', 'data':{}}
+            return HttpResponse(json.dumps(result))
+
         # update data
-        course.course_code = course_code
-        course.name = name
+        course.course_template = course_template
+        course.grade = grade
+        course.teacher = teacher
         course.save()
 
         message = 'Update success!'
 
-    courses = Course.objects.all().filter(deleted_at__isnull=True)
-    table = []
-    for course in courses:
-        table.append([
-            course.course_code, 
-            course.name,
-            '<button type="button" class="btn btn-default">Edit</button> <button type="button" class="btn btn-danger" onclick="delete_row({})">Delete</button>'.format(course.id)
-        ])
-
+    table = generate_course_table()
     result = {'status':'success', 'message':message, 'data':{'table':table}}
     return HttpResponse(json.dumps(result))
 
@@ -245,7 +371,7 @@ def generate_exam_table():
             display_exam_type = '<span data-exam_type="1">Online</span>'
 
         table.append([
-            '<span data-course_id="{}">{}</span>'.format(exam.course.id, exam.course.name),
+            '<span data-course_id="{}">{} - {}</span>'.format(exam.course.id, exam.course.course_template.name, exam.course.grade),
             exam.name,
             exam.description,
             exam.exam_at.strftime("%Y-%m-%d %H:%M:%S"),
@@ -406,7 +532,7 @@ def generate_assignment_table():
     for assignment in assignments:
 
         table.append([
-            '<span data-course_id="{}">{}</span>'.format(assignment.course.id, assignment.course.name),
+            '<span data-course_id="{}">{} - {}</span>'.format(assignment.course.id, assignment.course.course_template.name, assignment.course.grade),
             assignment.name,
             assignment.description,
             assignment.deadline_at.strftime("%Y-%m-%d %H:%M:%S"),
