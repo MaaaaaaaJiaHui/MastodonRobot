@@ -1,10 +1,11 @@
 from bs4 import BeautifulSoup
 import inspect
 import datetime
+
 class BotDataCenter(object):
 
     ACTION_TYPE_POLL = 0
-    # ACTION_TYPE_POLL = 0
+    ACTION_TYPE_QUERY = 1
 
     # save talk with different users
     # key-value structure
@@ -23,23 +24,28 @@ class BotDataCenter(object):
     # denotes the mastodon object, we need this to send message
     mastodon = None
 
+    def get_talks(self):
+        return self.talks
+
     def whoami(self):
         return inspect.stack()[1][3]
 
-    def __init__(self, mastodon, connection):
+    def __init__(self, mastodon, connection, talks={}):
         print('call function {} ...'.format(self.whoami()))
         self.connection = connection
         self.mastodon = mastodon
+        self.talks = talks
 
     def check_talks(self):
-        print('call function {} ...'.format(self.whoami()))
+        # print('call function {} ...'.format(self.whoami()))
         """
         look each talk and reply the answers
         """
         # remove expired talk
         self.clean_expired_talks()
 
-        print('current talks:', self.talks)
+        if len(self.talks) > 0:
+            print('current exists {} talks.'.format(len(self.talks)))
 
         # check polls
         # call the response function if poll was voted
@@ -48,22 +54,19 @@ class BotDataCenter(object):
             talk = self.talks[user_id]
             action = talk['action']
 
-            if action is self.ACTION_TYPE_POLL:
+            if action in [self.ACTION_TYPE_POLL, self.ACTION_TYPE_QUERY]:
                 # get parameters from talk
                 poll_id = talk['data']['post']['poll']['id']
                 response_function = talk['response_function']
 
                 # read user by user_id
                 user = self.mastodon.account(user_id)
-                print('get user :', user)
 
                 # read poll
                 target_poll = self.mastodon.poll(poll_id)
 
                 # print voted result
-                print('-----------current poll is:----------')
-                print(target_poll)
-                selected_option = 'None'
+                selected_option = None
                 for poll_option in target_poll["options"]:
                     if poll_option["votes_count"] > 0:
                         selected_option = poll_option["title"]
@@ -72,6 +75,10 @@ class BotDataCenter(object):
                 # if no voted, just continue
                 if selected_option is None:
                     continue
+
+                print('get user(id:{}) {}'.format(str(user['id']), user['username']))
+                print('talk action:', action)
+                print('talk response function:', response_function)
 
                 # call response function
                 print('select {}'.format(selected_option))
@@ -105,6 +112,9 @@ class BotDataCenter(object):
             # but here is a talk, we just need stop the poll, and start from a new talk
             if action is self.ACTION_TYPE_POLL:
                 self.show_introduction(user)
+            elif action is self.ACTION_TYPE_QUERY:
+                response_function = current_talk['response_function']
+                getattr(self, response_function)(user=user,data={'mention':mention},is_response=True)
             else:
                 # TODO: search course info
                 pass
@@ -117,8 +127,114 @@ class BotDataCenter(object):
 
     # TODO: remove expired talk
     def clean_expired_talks(self):
-        print('call function {} ...'.format(self.whoami()))
+        # print('call function {} ...'.format(self.whoami()))
         pass
+    
+    def status_post(self, user, message, poll_options = None):
+        print('call function {} ...'.format(self.whoami()))
+        """
+        Send only message
+        """
+        full_message = "@{} ".format(user["acct"]) + message
+
+        # make poll
+        poll = None
+        if poll_options != None:
+            poll = self.mastodon.make_poll(options=poll_options, expires_in=5000)
+
+        print('status post :', full_message)
+
+        return self.mastodon.status_post(status=full_message, visibility="direct", poll=poll)
+
+    def send_poll(self, user, message, poll_configs, response_function, keep_current_talk=False):
+        print('call function {} ...'.format(self.whoami()))
+        """
+        send a poll and update the talk record
+        """
+        # make poll options
+        poll_options = []
+        for option, _, parameters in poll_configs:
+            poll_options.append(option)
+        
+        # send poll
+        post = self.status_post(user, message, poll_options)
+
+        # update talk record
+        if keep_current_talk == True:
+            self.talks[user['id']]['data']['post'] = post
+            self.talks[user['id']]['expired'] = (datetime.datetime.now()+datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            talk = {
+                'action': self.ACTION_TYPE_POLL,
+                'data': {
+                    'post': post
+                },
+                'expired': (datetime.datetime.now()+datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S"),
+                'response_function': response_function,
+            }
+            self.talks[user['id']] = talk
+        return None
+    
+    def start_querying(self, user, message, response_function, keep_current_talk=False):
+        """
+        start querying something by continue asking
+        we would add a exit option for end this asking
+        """
+        print('call function {} ...'.format(self.whoami()))
+        """
+        send a poll and update the talk record
+        """
+
+        # adding exit option
+        poll_configs = [
+            ('Quit searching.', 'quit_searching', None),
+            ('Back to last question.', 'show_introduction', None),
+        ]
+        message += "(If you don't want to end the searching, just select the following option.)"
+        print('query:', message)
+
+        # make poll options
+        poll_options = []
+        for option, _, _ in poll_configs:
+            poll_options.append(option)
+        
+        # send poll
+        post = self.status_post(user, message, poll_options)
+
+        # update talk record
+        if keep_current_talk == True:
+            self.talks[user['id']]['data']['post'] = post
+            self.talks[user['id']]['expired'] = (datetime.datetime.now()+datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            talk = {
+                'action': self.ACTION_TYPE_QUERY,
+                'data': {
+                    'post': post
+                },
+                'expired': (datetime.datetime.now()+datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S"),
+                'response_function': response_function,
+            }
+            self.talks[user['id']] = talk
+        return None
+    
+    def quit_searching(self, user, data=None, is_response=False):
+        """
+        let user exit from current asking
+        just remove current talk
+        """
+        if is_response == True:
+            self.talks.pop(user['id'])
+            print('quit from current talk!')
+        return None
+
+    def is_number(s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            pass
+        return False
+
     # ------------------ talk detail functions --------------
     # all the talk detail functions paras should be: user, data=None, is_response=False
     # =======================================================
@@ -152,48 +268,6 @@ class BotDataCenter(object):
             return False
         return True
 
-    def status_post(self, user, message, poll_options = None):
-        print('call function {} ...'.format(self.whoami()))
-        """
-        Send only message
-        """
-        full_message = "@{} ".format(user["acct"]) + message
-
-        # make poll
-        poll = None
-        if poll_options != None:
-            poll = self.mastodon.make_poll(options=poll_options, expires_in=5000)
-
-        print('status post :', full_message)
-
-        return self.mastodon.status_post(status=full_message, visibility="direct", poll=poll)
-
-    def send_poll(self, user, message, poll_configs):
-        print('call function {} ...'.format(self.whoami()))
-        """
-        send a poll and update the talk record
-        """
-        # make poll options
-        poll_options = []
-        for option, response_function, parameters in poll_configs:
-            poll_options.append(option)
-        
-        # send poll
-        post = self.status_post(user, message, poll_options)
-
-        # update talk record
-        talk = {
-            'action': self.ACTION_TYPE_POLL,
-            'data': {
-                'post': post
-            },
-            'expired': (datetime.datetime.now()+datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S"),
-            'response_function': 'show_introduction',
-        }
-
-        self.talks[user['id']] = talk
-        return None
-
     def show_introduction(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
         """
@@ -201,9 +275,7 @@ class BotDataCenter(object):
         """
         poll_configs = [
             ('School Info', 'school_info', None),
-            ('School Contact Info', 'school_contact_info', None),
-            ('Newbee Info', 'school_newbee_info', None),
-            ('F & Q', 'school_f_and_q', None),
+            ('Course Info', 'class_info', None),
         ]
 
         if is_response == True:
@@ -212,20 +284,21 @@ class BotDataCenter(object):
             # response
             for option, response_function, parameters in poll_configs:
                 if selected_option == option:
-                    # call the function
-                    getattr(self, response_function)(user=user, data=data, is_response=True)
                     # clean talk record
                     self.talks.pop(user['id'])
-                    break
+
+                    # call the function
+                    getattr(self, response_function)(user=user, data=data, is_response=True)
+                    return None
             
             # error
             print('response to show introduction error! info:')
-            print(data)
+            print(data['selected_option'])
 
         else:
             message = "Hello, I'm School Bot, nice to meet you! What do want to know?"
             print(message)
-            self.send_poll(user, message, poll_configs)
+            self.send_poll(user, message, poll_configs, 'show_introduction')
 
         return None
 
@@ -286,16 +359,243 @@ class BotDataCenter(object):
 
 
 
-
-
-
     def class_info(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
         """
         Display info, let students choose options
         """
-        message = "This function is developing"
-        print(message)
+        poll_configs = [
+            ('Recent Exam Info', 'get_recent_exam_info', None),
+            ('Recent Assignment Info', 'get_recent_assignment_info', None),
+            ('Rate & Suggestion', 'rate_and_suggestion', None),
+        ]
+
+        # check current course_id and grade
+        course_code = None
+        grade = None
+        course_id = None
+
+        if user['id'] in self.talks:
+            talk = self.talks[user['id']]
+            if 'course_code' in talk['data']:
+                course_code = talk['data']['course_code']
+            if 'grade' in talk['data']:
+                grade = talk['data']['grade']
+            if 'course_id' in talk['data']:
+                course_id = int(talk['data']['course_id'])
+
+        if is_response == True and 'mention' in data and (course_code is None or grade is None):
+
+            # get response from data
+            mention = data['mention']
+            soup = BeautifulSoup(mention["content"], "html.parser")
+            received_message = soup.find('p').get_text().strip()
+
+            print('reading answers for class info, in current talk, course code is {}, grade is {}, course id is {}'.format(course_code, grade, str(course_id)))
+
+            if course_code is None:
+                print('reading answers as course code')
+
+                # get course code from message
+                # search course code in database
+                words = received_message.split()
+                for word in words:
+                    # check if word is @xxxxx
+                    if word[0] == '@':
+                        continue
+    
+                    cursor = self.connection.cursor()
+                    sql = "SELECT id, name from school_info_coursetemplate WHERE course_code = '{}' AND deleted_at is NULL;".format(word)
+                    cursor.execute(sql)
+                    result = cursor.fetchall()
+                    for id, name in result:
+                        print("find course info: id is {}, name is {}, course code is {}".format(id, name, word))
+                        course_code = word
+                        break
+                    if course_code != None:
+                        break
+
+                # find, save it to talk data
+                # ask for grade
+                if course_code != None:
+                    talk['data']['course_code'] = course_code
+                    print('change talk:', self.talks[user['id']])
+
+                    message = "For searching what you want, could you tell me what grade you want ?"
+                    self.start_querying(user, message, 'class_info', keep_current_talk=True)
+
+                    # debug print talk
+                    talk = self.talks[user['id']]
+                    course_code = None
+                    grade = None
+                    course_id = None
+
+                    if 'course_code' in talk['data']:
+                        course_code = talk['data']['course_code']
+                    if 'grade' in talk['data']:
+                        grade = talk['data']['grade']
+                    if 'course_id' in talk['data']:
+                        course_id = int(talk['data']['course_id'])
+
+                    print('reading answers for class info, in current talk, course code is {}, grade is {}, course id is {}'.format(course_code, grade, str(course_id)))
+                    print('change talk:', self.talks[user['id']])
+                    return None
+
+                # not found, ask for course code again
+                message = "Sorry we can't find any course by your input {}, could you please try again ?".format(received_message)
+                self.start_querying(user, message, 'class_info')
+                return None
+            elif grade is None:
+                print('reading answers as course code')
+
+                # get grade from message
+                # search grade in database
+                course_id = None
+                words = received_message.split()
+                for word in words:
+                    # check if word is @xxxxx
+                    if word[0] == '@':
+                        continue
+    
+                    cursor = self.connection.cursor()
+                    sql = "SELECT id from school_info_course WHERE course_template_id IN (SELECT id from school_info_coursetemplate WHERE course_code = '{}' AND deleted_at is NULL) AND grade = '{}' AND deleted_at is NULL;".format(course_code, word)
+                    cursor.execute(sql)
+                    result = cursor.fetchall()
+                    for id in result:
+                        id = id[0]
+                        print("find course info: id is {}".format(id))
+                        grade = word
+                        course_id = id
+                        break
+                    if grade != None:
+                        break
+
+                # find, save it to talk data
+                # ask for polls
+                if grade != None:
+                    self.talks[user['id']]['data']['grade'] = grade
+                    self.talks[user['id']]['data']['course_id'] = course_id
+
+                    message = "What do you want to know about {}({}), please select following option.".format(course_code, grade)
+                    self.send_poll(user, message, poll_configs, 'class_info', keep_current_talk=True)
+                    return None
+
+                # not found, ask for course id again
+                message = "For searching what you want, could you tell me what grade you want ?"
+                message = "Sorry we can't find any course({}) by grade in your input {}, could you please try again ?".format(course_code, received_message)
+
+                self.start_querying(user, message, 'class_info', keep_current_talk=True)
+                return None
+            else:
+                print('this input is illegal!')
+                return None
+        elif is_response is True and 'selected_option' in data and course_code != None and grade != None:
+            # get selection
+            selected_option = data['selected_option']
+
+            print('now we know course code and grade, reading selected option {} query'.format(selected_option))
+
+            # response
+            for option, response_function, parameters in poll_configs:
+                if selected_option == option:
+
+                    self.talks[user['id']]['data']['poll_configs'] = poll_configs
+
+                    # call the function
+                    getattr(self, response_function)(user=user, data=data, is_response=True)
+                    return None
+
+            # error
+            print('this selected option is illegal!')
+            return None
+
+        else:
+            message = "For searching what you want, could you tell me what course code of course you want ?"
+            self.start_querying(user, message, 'class_info')
+
+        return None
+
+    def get_recent_exam_info(self, user, data=None, is_response=False):
+        # get course_id from data
+        talk = self.talks[user['id']]
+        course_id = talk['data']['course_id']
+        course_code = talk['data']['course_code']
+        grade = talk['data']['grade']
+        poll_configs = talk['data']['poll_configs']
+
+        cursor = self.connection.cursor()
+        sql = "SELECT name, description,exam_at, exam_type, location, url from school_info_exam WHERE course_id = {} AND exam_at >= '{}' AND deleted_at is NULL ORDER BY exam_at ASC;".format(course_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        print('SQL:{}'.format(sql))
+        cursor.execute(sql)
+        result = cursor.fetchone()
+        print('result:',result)
+
+        if result is None:
+            # display result and ask again
+            message = "Sorry, not found {}({}) recent exam.".format(course_code, grade)
+            message += "\nWhat do you want to know about {}({}), please select following option.".format(course_code, grade)
+            self.send_poll(user, message, poll_configs, 'class_info', keep_current_talk=True)
+        else:
+            # display result and ask again
+            name, description,exam_at, exam_type, location, url = result
+            print("find recent exam is {} {} {} {} {} {}".format(name, description,exam_at, exam_type, location, url))
+
+            message = "The recent exam:"
+            message += "\n{}".format(name)
+            message += "\n{}".format(description)
+            message += "\ntime: {}".format(exam_at)
+
+            if exam_type == 0:
+                message += "\ntype: offline"
+                message += "\nlocation: {}".format(location)
+            else:
+                message += "\ntype: online"
+            message += "\nmore info: {}".format(url)
+            message += "\n"
+            message += "\nWhat do you want to know about {}({}), please select following option.".format(course_code, grade)
+            self.send_poll(user, message, poll_configs, 'class_info', keep_current_talk=True)
+
+        return None
+    def get_recent_assignment_info(self, user, data=None, is_response=False):
+        """
+        display recent assignment info and send poll
+        """
+        # get course_id from data
+        talk = self.talks[user['id']]
+        course_id = talk['data']['course_id']
+        course_code = talk['data']['course_code']
+        grade = talk['data']['grade']
+        poll_configs = talk['data']['poll_configs']
+
+        cursor = self.connection.cursor()
+        sql = "SELECT name, description, deadline_at, url from school_info_assignment WHERE course_id = {} AND deadline_at >= '{}' AND deleted_at is NULL ORDER BY deadline_at ASC;".format(course_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        print('SQL:{}'.format(sql))
+        cursor.execute(sql)
+        result = cursor.fetchone()
+        print('result:',result)
+
+        if result is None:
+            # display result and ask again
+            message = "Sorry, not found {}({}) recent assignment.".format(course_code, grade)
+            message += "\nWhat do you want to know about {}({}), please select following option.".format(course_code, grade)
+            self.send_poll(user, message, poll_configs, 'class_info', keep_current_talk=True)
+        else:
+            # display result and ask again
+            name, description, deadline_at, url = result
+            print("find recent assignment is {} {} {} {}".format(name, description, deadline_at, url))
+
+            message = "The recent assignment:"
+            message += "\n{}".format(name)
+            message += "\n{}".format(description)
+            message += "\ndeadline: {}".format(deadline_at)
+            message += "\nmore info: {}".format(url)
+            message += "\n"
+            message += "\nWhat do you want to know about {}({}), please select following option.".format(course_code, grade)
+            self.send_poll(user, message, poll_configs, 'class_info', keep_current_talk=True)
+
+        return None
+    def rate_and_suggestion(self, user, data=None, is_response=False):
+        pass
 
     def meeting_book(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
