@@ -238,36 +238,6 @@ class BotDataCenter(object):
     # ------------------ talk detail functions --------------
     # all the talk detail functions paras should be: user, data=None, is_response=False
     # =======================================================
-    def select_info(self, user, message, conn=None):
-        print('call function {} ...'.format(self.whoami()))
-        if message == 'hello':
-            show_introduction(self, user)
-        elif message == 'school_info':
-            school_info(self, user, conn)
-        elif message == 'school_official_website':
-            school_official_website()
-        elif message == 'school_contact_info':
-            school_contact_info()
-        elif message == 'school_newbee_info':
-            school_newbee_info()
-        elif message == 'school_f_and_q':
-            school_f_and_q()
-        elif message == 'class_info':
-            class_info()
-        elif message == 'meeting_book':
-            meeting_book()
-        elif message == 'teach_feedback':
-            teach_feedback()
-        elif message == 'question_history':
-            question_history()
-        elif message == 'other_questions':
-            other_questions()
-        else:
-            # if don't understand what he/she say, just display function introduction message
-            # show_introduction(self, user)
-            return False
-        return True
-
     def show_introduction(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
         """
@@ -276,6 +246,7 @@ class BotDataCenter(object):
         poll_configs = [
             ('School Info', 'school_info', None),
             ('Course Info', 'class_info', None),
+            ('Make Appointment', 'make_appointment', None),
         ]
 
         if is_response == True:
@@ -324,39 +295,6 @@ class BotDataCenter(object):
         message += "\n3. school newbee info: "+school_info_dict["school_newbie_info"]
         message += "\n4. school F&Q: "+school_info_dict["school_f_and_q"]
         return self.status_post(user, message)
-
-    def school_official_website(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
-        """
-        Display info, let students choose options
-        """
-        message = "This function is developing"
-        print(message)
-
-    def school_contact_info(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
-        """
-        Display info, let students choose options
-        """
-        message = "This function is developing"
-        print(message)
-
-    def school_newbee_info(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
-        """
-        Display info, let students choose options
-        """
-        message = "This function is developing"
-        print(message)
-
-    def school_f_and_q(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
-        """
-        Display info, let students choose options
-        """
-        message = "This function is developing"
-        print(message)
-
 
 
     def class_info(self, user, data=None, is_response=False):
@@ -596,14 +534,58 @@ class BotDataCenter(object):
         return None
     def rate_and_suggestion(self, user, data=None, is_response=False):
         pass
-
-    def meeting_book(self, user, data=None, is_response=False):
+    
+    def make_appointment(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
         """
-        Display info, let students choose options
+        Ask for teaching assistant's name and display the contact info.
         """
-        message = "This function is developing"
-        print(message)
+        # check current course_id and grade
+        teaching_assistant_name = None
+
+        if is_response == True and 'mention' in data and teaching_assistant_name is None:
+
+            # get response from data
+            mention = data['mention']
+            soup = BeautifulSoup(mention["content"], "html.parser")
+            received_message = soup.find('p').get_text().strip()
+
+            print('reading answers for making appointment ...')
+
+            # get course code from message
+            # search course code in database
+            words = received_message.split()
+            for word in list(words):
+                # check if word is @xxxxx
+                if word[0] == '@':
+                    words.remove(word)
+            
+            input_user_name = " ".join(words)
+            search_name = "%".join(words)
+
+            cursor = self.connection.cursor()
+            sql = "SELECT user_name, email from school_info_teachingassistant WHERE user_name like '%{}%' AND deleted_at is NULL;".format(search_name)
+            cursor.execute(sql)
+            result = cursor.fetchone()
+            
+            if result is None:
+                # not found, ask for name again
+                message = "Sorry we can't find any teaching assistant who's name is {}, could you please try again ?".format(input_user_name)
+                self.start_querying(user, message, 'make_appointment', keep_current_talk=True)
+                return None
+            else:
+                # clean current talk
+                self.talks.pop(user['id'])
+                # display the info
+                message = "{} email is:".format(result[0])
+                message += "\n{}".format(result[1])
+                return self.status_post(user, message)
+        else:
+            message = "Please tell me the teaching assistant name who you want to make an appointment."
+            self.start_querying(user, message, 'make_appointment')
+
+        return None
+
 
     def teach_feedback(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
