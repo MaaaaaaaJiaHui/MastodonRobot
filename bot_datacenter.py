@@ -246,6 +246,7 @@ class BotDataCenter(object):
         poll_configs = [
             ('School Info', 'school_info', None),
             ('Course Info', 'class_info', None),
+            ('Feedback', 'feedback', None),
             ('Make Appointment', 'make_appointment', None),
         ]
 
@@ -259,7 +260,7 @@ class BotDataCenter(object):
                     self.talks.pop(user['id'])
 
                     # call the function
-                    getattr(self, response_function)(user=user, data=data, is_response=True)
+                    getattr(self, response_function)(user=user, data=data, is_response=False)
                     return None
             
             # error
@@ -586,6 +587,40 @@ class BotDataCenter(object):
 
         return None
 
+    def feedback(self, user, data=None, is_response=False):
+        print('call function {} ...'.format(self.whoami()))
+        """
+        Display info, let students choose options
+        """
+        poll_configs = [
+            ('Teaching Evaluate', 'get_recent_exam_info', None),
+            ('Other Question', 'other_questions', None),
+        ]
+
+        if is_response == True:
+            # get response from data
+            selected_option = data['selected_option']
+            # response
+            for option, response_function, parameters in poll_configs:
+                if selected_option == option:
+                    # clean talk record
+                    self.talks.pop(user['id'])
+
+                    # call the function
+                    getattr(self, response_function)(user=user, data=data)
+                    return None
+
+            # error
+            print('response to feedback error! info:')
+            print(data['selected_option'])
+        else:
+            message = "You can select teaching evaluate and scoring for the class and make some suggestions!"
+            message += "\nIf you have some questions, but just can't find answer by our bot, you can select other questions option and tell us."
+            self.send_poll(user, message, poll_configs, 'feedback')
+
+        return None
+
+
 
     def teach_feedback(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
@@ -603,10 +638,44 @@ class BotDataCenter(object):
         message = "This function is developing"
         print(message)
 
+
     def other_questions(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
         """
-        Display info, let students choose options
+        Ask for record new questions.
         """
-        message = "This function is developing"
-        print(message)
+
+        if is_response == True and 'mention' in data:
+
+            # get response from data
+            mention = data['mention']
+            soup = BeautifulSoup(mention["content"], "html.parser")
+            received_message = soup.find('p').get_text().strip()
+
+            print('reading question which we need to save ...')
+
+            # get course code from message
+            # search course code in database
+            words = received_message.split()
+            for word in list(words):
+                # check if word is @xxxxx
+                if word[0] == '@':
+                    words.remove(word)
+
+            question = " ".join(words)
+            now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor = self.connection.cursor()
+            sql = "INSERT INTO `school_info_question` (`id`, `created_at`, `updated_at`, `deleted_at`, `user_id`, `user_name`, `question_content`) VALUES (NULL, '{}', '{}', NULL, {}, '{}', '{}');".format(now_time, now_time, user['id'], user['username'], question)
+            cursor.execute(sql)
+
+            # clean current talk
+            self.talks.pop(user['id'])
+            # display the info
+            message = "Submit success! Thank for your feedback very much :)"
+            return self.status_post(user, message)
+        else:
+            message = "Please input your question, we would answer it later."
+            self.start_querying(user, message, 'other_questions')
+
+        return None
