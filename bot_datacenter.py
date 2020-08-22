@@ -7,6 +7,11 @@ class BotDataCenter(object):
     ACTION_TYPE_POLL = 0
     ACTION_TYPE_QUERY = 1
 
+    QUERY_HISTORY_SCHOOL_INFO = 'School Info'
+    QUERY_HISTORY_ASSIGNMENT_INFO = 'Assignment Info'
+    QUERY_HISTORY_EXAM_INFO = 'Exam Info'
+    QUERY_HISTORY_TEACHING_ASSISTANT_INFO = 'Teaching assistant Info'
+
     # save talk with different users
     # key-value structure
     # key: user_id
@@ -295,6 +300,10 @@ class BotDataCenter(object):
         message += "\n2. school contact info: "+school_info_dict["school_contact_info"]
         message += "\n3. school newbee info: "+school_info_dict["school_newbie_info"]
         message += "\n4. school F&Q: "+school_info_dict["school_f_and_q"]
+
+        # save query history
+        self.save_history(user['id'], self.QUERY_HISTORY_SCHOOL_INFO, message)
+
         return self.status_post(user, message)
 
 
@@ -489,6 +498,11 @@ class BotDataCenter(object):
                 message += "\nlocation: {}".format(location)
             else:
                 message += "\ntype: online"
+
+            # save query history
+            title = self.QUERY_HISTORY_EXAM_INFO+" Of {}({})".format(course_code, grade)
+            self.save_history(user['id'], title, message)
+
             message += "\nmore info: {}".format(url)
             message += "\n"
             message += "\nWhat do you want to know about {}({}), please select following option.".format(course_code, grade)
@@ -527,6 +541,11 @@ class BotDataCenter(object):
             message += "\n{}".format(name)
             message += "\n{}".format(description)
             message += "\ndeadline: {}".format(deadline_at)
+
+            # save query history
+            title = self.QUERY_HISTORY_ASSIGNMENT_INFO+" Of {}({})".format(course_code, grade)
+            self.save_history(user['id'], title, message)
+
             message += "\nmore info: {}".format(url)
             message += "\n"
             message += "\nWhat do you want to know about {}({}), please select following option.".format(course_code, grade)
@@ -578,8 +597,14 @@ class BotDataCenter(object):
                 # clean current talk
                 self.talks.pop(user['id'])
                 # display the info
-                message = "{} email is:".format(result[0])
-                message += "\n{}".format(result[1])
+                teaching_assistant_name, email = result
+                message = "{} email is:".format(teaching_assistant_name)
+                message += "\n{}".format(email)
+
+                # save query history
+                title = self.QUERY_HISTORY_TEACHING_ASSISTANT_INFO+": {}".format(teaching_assistant_name)
+                self.save_history(user['id'], title, message)
+
                 return self.status_post(user, message)
         else:
             message = "Please tell me the teaching assistant name who you want to make an appointment."
@@ -838,4 +863,37 @@ class BotDataCenter(object):
             message = "Please input your question, we would answer it later."
             self.start_querying(user, message, 'other_questions')
 
+        return None
+    
+    def save_history(self, user_id, title, message):
+        """
+        1. try to get query history by user_id and title
+        2. if no history, just insert new one
+        3. if history exists and the message is the same, just update the update time
+        4. if history exists and the message is updated, just update the message
+        """
+        now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # 1. try to get query history by user_id and title
+        cursor = self.connection.cursor()
+        sql = "SELECT id, message from school_info_queryhistory WHERE user_id = '{}' AND title = '{}' AND deleted_at is NULL;".format(user_id, title)
+        cursor.execute(sql)
+        result = cursor.fetchone()
+
+        # 2. if no history, just insert new one
+        if result is None:
+            sql = "INSERT INTO `school_info_queryhistory` (`id`, `created_at`, `updated_at`, `deleted_at`, `user_id`, `query_content`, `query_title`) VALUES (NULL, {}, {}, NULL, '{}', '{}', '{}');".format(now_time, now_time, user_id, message, title)
+            cursor.execute(sql)
+            return None
+
+        id, old_message = result
+        # 3. if history exists and the message is the same, just update the update time
+        if old_message == message:
+            sql = "UPDATE `school_info_queryhistory` SET `updated_at` = '{}' WHERE `school_info_queryhistory`.`id` = {};".format(now_time, id)
+            cursor.execute(sql)
+            return None
+
+        # 4. if history exists and the message is updated, just update the message
+        sql = "UPDATE `school_info_queryhistory` SET `updated_at` = '{}', `query_content` = '{}' WHERE `school_info_queryhistory`.`id` = 1;".format(now_time, message, id)
+        cursor.execute(sql)
         return None
