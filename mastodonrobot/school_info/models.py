@@ -114,6 +114,7 @@ class Question(BaseSchema):
 
 class QueryHistory(BaseSchema):
     user_id = models.IntegerField()
+    query_title = models.CharField(max_length=512)
     query_content = models.TextField()
 
     def __str__(self):
