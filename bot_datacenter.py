@@ -593,7 +593,7 @@ class BotDataCenter(object):
         Display info, let students choose options
         """
         poll_configs = [
-            ('Teaching Evaluate', 'teach_feedback', None),
+            ('Teaching Evaluate', 'get_recent_exam_info', None),
             ('Other Question', 'other_questions', None),
         ]
 
@@ -620,175 +620,15 @@ class BotDataCenter(object):
 
         return None
 
+
+
     def teach_feedback(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
         """
-        1. Ask for scoring from 1~10.
-        2. Ask for suggestion.
+        Display info, let students choose options
         """
-        # read current course_id and grade
-        course_code = None
-        grade = None
-        course_id = None
-        score = None
-        suggestion = None
-        if user['id'] in self.talks:
-            talk = self.talks[user['id']]
-            if 'course_code' in talk['data']:
-                course_code = talk['data']['course_code']
-            if 'grade' in talk['data']:
-                grade = talk['data']['grade']
-            if 'course_id' in talk['data']:
-                course_id = int(talk['data']['course_id'])
-            if 'score' in talk['data']:
-                score = int(talk['data']['score'])
-            if 'suggestion' in talk['data']:
-                suggestion = talk['data']['suggestion']
-
-        if is_response == True and 'mention' in data and (course_code is None or grade is None or course_id is None or score is None or suggestion is None):
-            # get response from data
-            mention = data['mention']
-            soup = BeautifulSoup(mention["content"], "html.parser")
-            received_message = soup.find('p').get_text().strip()
-
-            print('reading answers for teaching feedback, in current talk, course code is {}, grade is {}, course id is {}'.format(course_code, grade, str(course_id)))
-
-            if course_code is None:
-                print('reading answers as course code')
-
-                # get course code from message
-                # search course code in database
-                words = received_message.split()
-                for word in words:
-                    # check if word is @xxxxx
-                    if word[0] == '@':
-                        continue
-    
-                    cursor = self.connection.cursor()
-                    sql = "SELECT id, name from school_info_coursetemplate WHERE course_code = '{}' AND deleted_at is NULL;".format(word)
-                    cursor.execute(sql)
-                    result = cursor.fetchall()
-                    for id, name in result:
-                        print("find course info: id is {}, name is {}, course code is {}".format(id, name, word))
-                        course_code = word
-                        break
-                    if course_code != None:
-                        break
-
-                # find, save it to talk data
-                # ask for grade
-                if course_code != None:
-                    talk['data']['course_code'] = course_code
-                    print('change talk:', self.talks[user['id']])
-
-                    message = "Please relying grade."
-                    self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                    return None
-
-                # not found, ask for course code again
-                message = "Sorry we can't find any course by your input {}, could you please try again ?".format(received_message)
-                self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                return None
-            elif grade is None:
-                print('reading answers as course code')
-
-                # get grade from message
-                # search grade in database
-                course_id = None
-                words = received_message.split()
-                for word in words:
-                    # check if word is @xxxxx
-                    if word[0] == '@':
-                        continue
-    
-                    cursor = self.connection.cursor()
-                    sql = "SELECT id from school_info_course WHERE course_template_id IN (SELECT id from school_info_coursetemplate WHERE course_code = '{}' AND deleted_at is NULL) AND grade = '{}' AND deleted_at is NULL;".format(course_code, word)
-                    cursor.execute(sql)
-                    result = cursor.fetchall()
-                    for id in result:
-                        id = id[0]
-                        print("find course info: id is {}".format(id))
-                        grade = word
-                        course_id = id
-                        break
-                    if grade != None:
-                        break
-
-                # find, save it to talk data
-                # ask for polls
-                if grade != None:
-                    self.talks[user['id']]['data']['grade'] = grade
-                    self.talks[user['id']]['data']['course_id'] = course_id
-
-                    message = "Please scoring {}({}) from 0~10.".format(course_code, grade)
-                    self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                    return None
-
-                # not found, ask for course id again
-                message = "Sorry we can't find any course({}) by grade in your input {}, could you please try again ?".format(course_code, received_message)
-
-                self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                return None
-            elif score is None:
-                print('reading answers as score')
-
-                # get score from message
-                score = None
-                words = received_message.split()
-                for word in list(words):
-                    # check if word is @xxxxx
-                    if word[0] == '@':
-                        words.remove(word)
-                score = int("".join(words))
-
-                # check score whether is correct
-                if score < 0 or score > 10:
-                    message = "Score must be 0~10 number, please try again."
-                    self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                    return None
-                
-                # save score
-                self.talks[user['id']]['data']['score'] = score
-
-                message = "If you have any suggestions, you can rely me. If not, just rely -1."
-                self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-            
-            elif suggestion is None:
-                print('reading answers as suggestion')
-
-                # get suggestion from message
-                suggestion = None
-                words = received_message.split()
-                for word in list(words):
-                    # check if word is @xxxxx
-                    if word[0] == '@':
-                        words.remove(word)
-                suggestion = " ".join(words)
-
-                # check suggestion whether is correct
-                if suggestion == '-1':
-                    suggestion = ''
-
-                # save result to db
-                now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                cursor = self.connection.cursor()
-                sql = "INSERT INTO `school_info_score` (`id`, `created_at`, `updated_at`, `deleted_at`, `user_id`, `score`, `suggestion`, `course_id`) VALUES (NULL, '{}', '{}', NULL, '{}', '{}', '{}', '{}');".format(now_time, now_time, user['id'], score, suggestion, course_id)
-                cursor.execute(sql)
-
-                # clean current talk
-                self.talks.pop(user['id'])
-                # display the info
-                message = "Submit success! Thank for your feedback very much :)"
-                return self.status_post(user, message)
-
-            else:
-                print('this input is illegal!')
-                self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                return None
-
-        else:
-            message = "Please tell me which course you want to scoring by relying the course code."
-            self.start_querying(user, message, 'teach_feedback')
+        message = "This function is developing"
+        print(message)
 
     def question_history(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
