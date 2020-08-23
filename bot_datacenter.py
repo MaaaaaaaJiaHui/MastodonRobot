@@ -130,10 +130,23 @@ class BotDataCenter(object):
             self.show_introduction(user)
         return None
 
-    # TODO: remove expired talk
+    # remove expired talk
     def clean_expired_talks(self):
         # print('call function {} ...'.format(self.whoami()))
-        pass
+        if len(self.talks) <= 0:
+            return None
+        
+        talk_keys = self.talks.keys()
+        for user_id in talk_keys:
+            # get expired time
+            expired_time = datetime.datetime.strptime(self.talks[user_id]['expired'], "%Y-%m-%d %H:%M:%S")
+
+            # if expired, just remove talk record
+            if datetime.datetime.now() > expired_time:
+                print('The talk expired, now we remove it. Removed talk info:')
+                print(self.talks[user_id])
+                self.talks.pop(user_id)
+        return None
     
     def status_post(self, user, message, poll_options = None):
         print('call function {} ...'.format(self.whoami()))
@@ -249,7 +262,7 @@ class BotDataCenter(object):
         Introduce the bot functions.
         """
         poll_configs = [
-            ('School Info', 'school_info', None),
+            ('School Info & Fast Query', 'school_info_and_query_history', None),
             ('Course Info', 'class_info', None),
             ('Feedback', 'feedback', None),
             ('Make Appointment', 'make_appointment', None),
@@ -276,6 +289,41 @@ class BotDataCenter(object):
             message = "Hello, I'm School Bot, nice to meet you! What do want to know?"
             print(message)
             self.send_poll(user, message, poll_configs, 'show_introduction')
+
+        return None
+
+    def school_info_and_query_history(self, user, data=None, is_response=False):
+        print('call function {} ...'.format(self.whoami()))
+        """
+        Introduce the bot functions.
+        """
+        poll_configs = [
+            ('School Info', 'school_info', None),
+            ('Query History', 'question_history', None),
+        ]
+
+        if is_response == True:
+            # get response from data
+            selected_option = data['selected_option']
+            # response
+            for option, response_function, parameters in poll_configs:
+                if selected_option == option:
+                    # clean talk record
+                    self.talks.pop(user['id'])
+
+                    # call the function
+                    getattr(self, response_function)(user=user, data=data, is_response=False)
+                    return None
+            
+            # error
+            print('response to show introduction error! info:')
+            print(data['selected_option'])
+
+        else:
+            message = "You could check school basic info by select first option."
+            message += "\nOr check your latest 10 query history."
+            print(message)
+            self.send_poll(user, message, poll_configs, 'school_info_and_query_history')
 
         return None
 
@@ -772,7 +820,7 @@ class BotDataCenter(object):
                 # save score
                 self.talks[user['id']]['data']['score'] = score
 
-                message = "If you have any suggestions, you can rely me. If not, just rely -1."
+                message = "If you have any suggestions, you can reply me. If not, just reply -1."
                 self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
             
             elif suggestion is None:
@@ -815,11 +863,107 @@ class BotDataCenter(object):
     def question_history(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
         """
-        Display info, let students choose options
+        If can't find query history, display there are no query history.
+        If not, display latest 10 query history..
         """
-        message = "This function is developing"
-        print(message)
 
+        latest_10_query_history = None
+        if user['id'] in self.talks:
+            talk = self.talks[user['id']]
+            if 'query_history' in talk['data']:
+                latest_10_query_history = talk['data']['query_history']
+
+        if is_response == True and 'mention' in data:
+
+            # read history
+            if latest_10_query_history is None:
+                cursor = self.connection.cursor()
+                sql = "SELECT query_title, query_content from school_info_queryhistory WHERE user_id = '{}' AND deleted_at is NULL ORDER BY updated_at DESC LIMIT 10;".format(user['id'])
+                cursor.execute(sql)
+                result = cursor.fetchall()
+                latest_10_query_history = []
+                for title, content in result:
+                    latest_10_query_history.append((title, content))
+
+                # save the query history to the talks record
+                self.talks[user['id']]['data']['query_history'] = latest_10_query_history
+
+            # get response from data
+            mention = data['mention']
+            soup = BeautifulSoup(mention["content"], "html.parser")
+            received_message = soup.find('p').get_text().strip()
+
+            print('reading question which we need to save ...')
+
+            # get course code from message
+            # search course code in database
+            try:
+                words = received_message.split()
+                for word in list(words):
+                    # check if word is @xxxxx
+                    if word[0] == '@':
+                        words.remove(word)
+
+                query_index = int(" ".join(words))
+                query_index -= 1 # the real index is from 0
+            except Exception as err:
+                message = "Please input 1~{} number :)".format(len(latest_10_query_history))
+                self.start_querying(user, message, 'question_history', keep_current_talk=True)
+                return None
+
+            # debug
+            print('get anaswer index {}'.format(query_index))
+            # debug
+
+            # check if input illegal, let user try again
+            if query_index < 0 or query_index > len(latest_10_query_history)-1:
+                message = "Sorry, we can't find question history based on your input."
+                message += "\nPlease try again."
+                message += "\nYour recent query history is:"
+                index = 1
+                for title, content in latest_10_query_history:
+                    message += "\n{}. {}".format(index, title)
+                    index += 1
+                message += "\nPlease reply the id of which query history you want to view."
+                self.start_querying(user, message, 'question_history', keep_current_talk=True)
+                return None
+
+            # display the query result
+            title, content = latest_10_query_history[query_index]
+            message = "The query history you want is:"
+            message += "\n{}".format(title)
+            message += "\n{}".format(content)
+
+            # clean current talk
+            self.talks.pop(user['id'])
+
+            return self.status_post(user, message)
+        else:
+            cursor = self.connection.cursor()
+            sql = "SELECT query_title, query_content from school_info_queryhistory WHERE user_id = '{}' AND deleted_at is NULL ORDER BY updated_at DESC LIMIT 10;".format(user['id'])
+            cursor.execute(sql)
+            result = cursor.fetchall()
+
+            # 1. Not find history, just display no query history
+            if result is None:
+                self.talks.pop(user['id'])
+                message = "Sorry, you don't have query history."
+                self.status_post(user, message)
+                return None
+
+            # 2. Find History, just leave selection
+            message = "Your recent query history is:"
+            latest_10_query_history = []
+            index = 1
+            for title, content in result:
+                latest_10_query_history.append((title, content))
+                message += "\n{}. {}".format(index, title)
+                index += 1
+            message += "\nPlease reply the id of which query history you want to view."
+
+            self.start_querying(user, message, 'question_history')
+
+        return None
 
     def other_questions(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
@@ -873,13 +1017,13 @@ class BotDataCenter(object):
 
         # 1. try to get query history by user_id and title
         cursor = self.connection.cursor()
-        sql = "SELECT id, message from school_info_queryhistory WHERE user_id = '{}' AND title = '{}' AND deleted_at is NULL;".format(user_id, title)
+        sql = "SELECT id, query_content from school_info_queryhistory WHERE user_id = '{}' AND query_title = '{}' AND deleted_at is NULL;".format(user_id, title)
         cursor.execute(sql)
         result = cursor.fetchone()
 
         # 2. if no history, just insert new one
         if result is None:
-            sql = "INSERT INTO `school_info_queryhistory` (`id`, `created_at`, `updated_at`, `deleted_at`, `user_id`, `query_content`, `query_title`) VALUES (NULL, {}, {}, NULL, '{}', '{}', '{}');".format(now_time, now_time, user_id, message, title)
+            sql = "INSERT INTO `school_info_queryhistory` (`id`, `created_at`, `updated_at`, `deleted_at`, `user_id`, `query_content`, `query_title`) VALUES (NULL, '{}', '{}', NULL, '{}', '{}', '{}');".format(now_time, now_time, user_id, message, title)
             cursor.execute(sql)
             return None
 
@@ -891,6 +1035,6 @@ class BotDataCenter(object):
             return None
 
         # 4. if history exists and the message is updated, just update the message
-        sql = "UPDATE `school_info_queryhistory` SET `updated_at` = '{}', `query_content` = '{}' WHERE `school_info_queryhistory`.`id` = 1;".format(now_time, message, id)
+        sql = "UPDATE `school_info_queryhistory` SET `updated_at` = '{}', `query_content` = '{}' WHERE `school_info_queryhistory`.`id` = {};".format(now_time, message, id)
         cursor.execute(sql)
         return None
