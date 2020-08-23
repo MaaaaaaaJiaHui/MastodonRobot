@@ -37,7 +37,7 @@ class HelloBot(PineappleBot):
         # logging.info("Got a {} from {} at {}".format(notif["type"], notif["account"]["username"], notif["created_at"]))
         # notif_type = notif["type"]
     
-    @interval(5)
+    @interval(3)
     def test2(self):
         try:
             self.datacenter.check_talks()
