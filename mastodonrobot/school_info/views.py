@@ -72,6 +72,9 @@ def teaching_assistant_post(request):
         result = {'status':'error', 'message':'Illegal email!', 'data':{}}
         return HttpResponse(json.dumps(result))
 
+    # transfer all the user name capitalize
+    user_name = user_name.lower()
+
     # create new teaching assistant
     teaching_assistant = TeachingAssistant.objects.create(user_name=user_name, email=email)
 
@@ -120,7 +123,7 @@ def teaching_assistant_delete_or_update(request, teaching_assistant_id):
             return HttpResponse(json.dumps(result))
         
         # update data
-        teaching_assistant.user_name = user_name
+        teaching_assistant.user_name = user_name.lower()
         teaching_assistant.email = email
         teaching_assistant.save()
 
@@ -175,6 +178,8 @@ def course_template_post(request):
     if name is None or name == '':
         result = {'status':'error', 'message':'Illegal name!', 'data':{}}
         return HttpResponse(json.dumps(result))
+    
+    course_code = course_code.upper()
 
     # create new course_template
     course_template = CourseTemplate.objects.create(course_code=course_code, name=name)
@@ -215,7 +220,7 @@ def course_template_delete_or_update(request, course_template_id):
             return HttpResponse(json.dumps(result))
         
         # update data
-        course_template.course_code = course_code
+        course_template.course_code = course_code.upper()
         course_template.name = name
         course_template.save()
 
@@ -685,7 +690,7 @@ def teacher_post(request):
         return HttpResponse(json.dumps(result))
 
     # create new teacher
-    teacher = Teacher.objects.create(user_name=user_name, email=email)
+    teacher = Teacher.objects.create(user_name=user_name.lower(), email=email)
 
     # transfer teachers objects to table data
     teachers = Teacher.objects.all().filter(deleted_at__isnull=True)
@@ -731,7 +736,7 @@ def teacher_delete_or_update(request, teacher_id):
             return HttpResponse(json.dumps(result))
         
         # update data
-        teacher.user_name = user_name
+        teacher.user_name = user_name.lower()
         teacher.email = email
         teacher.save()
 

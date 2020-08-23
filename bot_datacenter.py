@@ -459,7 +459,7 @@ class BotDataCenter(object):
                         continue
     
                     cursor = self.connection.cursor()
-                    sql = "SELECT id from school_info_course WHERE course_template_id IN (SELECT id from school_info_coursetemplate WHERE course_code = '{}' AND deleted_at is NULL) AND grade = '{}' AND deleted_at is NULL;".format(course_code, word)
+                    sql = "SELECT id from school_info_course WHERE course_template_id IN (SELECT id from school_info_coursetemplate WHERE course_code like '%{}%' AND deleted_at is NULL) AND grade = '{}' AND deleted_at is NULL;".format(course_code.upper(), word)
                     cursor.execute(sql)
                     result = cursor.fetchall()
                     for id in result:
@@ -635,7 +635,7 @@ class BotDataCenter(object):
             search_name = "%".join(words)
 
             cursor = self.connection.cursor()
-            sql = "SELECT user_name, email from school_info_teachingassistant WHERE user_name like '%{}%' AND deleted_at is NULL;".format(search_name)
+            sql = "SELECT user_name, email from school_info_teachingassistant WHERE user_name like '%{}%' AND deleted_at is NULL;".format(search_name.lower())
             cursor.execute(sql)
             result = cursor.fetchone()
             
@@ -778,7 +778,7 @@ class BotDataCenter(object):
                         continue
     
                     cursor = self.connection.cursor()
-                    sql = "SELECT id from school_info_course WHERE course_template_id IN (SELECT id from school_info_coursetemplate WHERE course_code = '{}' AND deleted_at is NULL) AND grade = '{}' AND deleted_at is NULL;".format(course_code, word)
+                    sql = "SELECT id from school_info_course WHERE course_template_id IN (SELECT id from school_info_coursetemplate WHERE course_code like '%{}%' AND deleted_at is NULL) AND grade = '{}' AND deleted_at is NULL;".format(course_code.upper(), word)
                     cursor.execute(sql)
                     result = cursor.fetchall()
                     for id in result:
