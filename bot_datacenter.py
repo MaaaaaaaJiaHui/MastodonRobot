@@ -315,7 +315,6 @@ class BotDataCenter(object):
         poll_configs = [
             ('Recent Exam Info', 'get_recent_exam_info', None),
             ('Recent Assignment Info', 'get_recent_assignment_info', None),
-            ('Rate & Suggestion', 'rate_and_suggestion', None),
         ]
 
         # check current course_id and grade
@@ -552,8 +551,6 @@ class BotDataCenter(object):
             self.send_poll(user, message, poll_configs, 'class_info', keep_current_talk=True)
 
         return None
-    def rate_and_suggestion(self, user, data=None, is_response=False):
-        pass
     
     def make_appointment(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
