@@ -12,6 +12,9 @@ class BotDataCenter(object):
     QUERY_HISTORY_EXAM_INFO = 'Exam Info'
     QUERY_HISTORY_TEACHING_ASSISTANT_INFO = 'Teaching assistant Info'
 
+    SPECIAL_SELECTION_QUIT_SEARCHING = 'Quit searching.'
+    SPECIAL_SELECTION_BACK_TO_ROOT = 'Back to First Question.'
+
     # save talk with different users
     # key-value structure
     # key: user_id
@@ -87,6 +90,17 @@ class BotDataCenter(object):
 
                 # call response function
                 print('select {}'.format(selected_option))
+
+                # handle special selection
+                if selected_option == self.SPECIAL_SELECTION_QUIT_SEARCHING:
+                    self.talks.pop(user['id'])
+                    self.quit_searching(user)
+                    return None
+                if selected_option == self.SPECIAL_SELECTION_BACK_TO_ROOT:
+                    self.talks.pop(user['id'])
+                    self.show_introduction(user)
+                    return None
+
                 data = {
                     'post': talk['data']['post'],
                     'selected_option': selected_option
@@ -205,10 +219,10 @@ class BotDataCenter(object):
 
         # adding exit option
         poll_configs = [
-            ('Quit searching.', 'quit_searching', None),
-            ('Back to last question.', 'show_introduction', None),
+            (self.SPECIAL_SELECTION_QUIT_SEARCHING, 'quit_searching', None),
+            (self.SPECIAL_SELECTION_BACK_TO_ROOT, 'show_introduction', None),
         ]
-        message += "(If you don't want to end the searching, just select the following option.)"
+        message += "(If you want to end the searching, just select the following option.)"
         print('query:', message)
 
         # make poll options
@@ -240,18 +254,10 @@ class BotDataCenter(object):
         let user exit from current asking
         just remove current talk
         """
-        if is_response == True:
-            self.talks.pop(user['id'])
-            print('quit from current talk!')
+        print('quit from current talk!')
+        message = "Talk end, thanks for talking with me :)"
+        self.status_post(user, message)
         return None
-
-    def is_number(s):
-        try:
-            float(s)
-            return True
-        except ValueError:
-            pass
-        return False
 
     # ------------------ talk detail functions --------------
     # all the talk detail functions paras should be: user, data=None, is_response=False
