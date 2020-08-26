@@ -130,6 +130,7 @@ class BotDataCenter(object):
             # if current talk is poll, all we need answer should be a selection
             # but here is a talk, we just need stop the poll, and start from a new talk
             if action is self.ACTION_TYPE_POLL:
+                self.quit_searching(user)
                 self.show_introduction(user)
             elif action is self.ACTION_TYPE_QUERY:
                 response_function = current_talk['response_function']
@@ -946,7 +947,7 @@ class BotDataCenter(object):
             return self.status_post(user, message)
         else:
             cursor = self.connection.cursor()
-            sql = "SELECT query_title, query_content from school_info_queryhistory WHERE user_id = '{}' AND deleted_at is NULL ORDER BY updated_at DESC LIMIT 10;".format(user['id'])
+            sql = "SELECT query_title, query_content from school_info_queryhistory WHERE user_id = {} AND deleted_at is NULL ORDER BY updated_at DESC LIMIT 10;".format(user['id'])
             cursor.execute(sql)
             result = cursor.fetchall()
 
