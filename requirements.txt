@@ -1,0 +1,5 @@
+ananas
+pymysql
+bs4
+django
+mysqlclient
