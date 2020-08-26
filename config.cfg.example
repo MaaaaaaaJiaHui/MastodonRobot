@@ -1,0 +1,6 @@
+[HELLOBOT]
+class = hello.HelloBot
+domain = example.org
+client_id = xxxxxxxxx
+client_secret = xxxxxxxx
+access_token = xxxxxxxxxx
