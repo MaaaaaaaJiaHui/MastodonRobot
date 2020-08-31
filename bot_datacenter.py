@@ -101,11 +101,13 @@ class BotDataCenter(object):
                     self.show_introduction(user)
                     return None
 
+                    
                 data = {
                     'post': talk['data']['post'],
                     'selected_option': selected_option
                 }
-                getattr(self, response_function)(user=user, data=data, is_response=True)
+                result = getattr(self, response_function)(user=user, data=data, is_response=True)
+                self.call_the_function_by_result(result)
 
         return None
     
@@ -131,10 +133,12 @@ class BotDataCenter(object):
             # but here is a talk, we just need stop the poll, and start from a new talk
             if action is self.ACTION_TYPE_POLL:
                 self.quit_searching(user)
-                self.show_introduction(user)
+                result = self.show_introduction(user)
+                self.call_the_function_by_result(result)
             elif action is self.ACTION_TYPE_QUERY:
                 response_function = current_talk['response_function']
-                getattr(self, response_function)(user=user,data={'mention':mention},is_response=True)
+                result = getattr(self, response_function)(user=user,data={'mention':mention},is_response=True)
+                self.call_the_function_by_result(result)
             else:
                 # TODO: search course info
                 pass
@@ -142,8 +146,59 @@ class BotDataCenter(object):
             # start talking from the question root
             # send a poll
             # record it to the talks
-            self.show_introduction(user)
+            result = self.show_introduction(user)
+            self.call_the_function_by_result(result)
         return None
+
+    def call_the_function_by_result(self, result):
+        while True:
+            response_function = result['response_function']
+            parameters = result['parameters']
+
+            # if the call function is status post, just break
+            # if the call function is send poll, just break
+            # if the call function is start querying, just break
+            # if the call function is quit searching, just break
+            # else, continue
+            if response_function == 'status_post':
+                self.status_post(
+                    user=parameters['user'], 
+                    message=parameters['message'], 
+                    poll_configs=parameters['poll_configs'], 
+                )
+                break
+            elif response_function == 'send_poll':
+                self.send_poll(
+                    user=parameters['user'], 
+                    message=parameters['message'], 
+                    poll_configs=parameters['poll_configs'], 
+                    response_function=parameters['response_function'],
+                    keep_current_talk=parameters['keep_current_talk']
+                )
+                break
+            elif response_function == 'start_querying':
+                self.start_querying(
+                    user=parameters['user'], 
+                    message=parameters['message'], 
+                    response_function=parameters['response_function'],
+                    keep_current_talk=parameters['keep_current_talk']
+                )
+                break
+            elif response_function == 'quit_searching':
+                self.quit_searching(
+                    user=parameters['user'], 
+                    data=parameters['data'], 
+                    is_response=parameters['is_response']
+                )
+                break
+            else:
+                result = getattr(self, response_function)(
+                    user=parameters['user'], 
+                    data=parameters['data'], 
+                    is_response=parameters['is_response']
+                )
+        return None
+
 
     # remove expired talk
     def clean_expired_talks(self):
@@ -285,8 +340,16 @@ class BotDataCenter(object):
                     self.talks.pop(user['id'])
 
                     # call the function
-                    getattr(self, response_function)(user=user, data=data, is_response=False)
-                    return None
+                    # getattr(self, response_function)(user=user, data=data, is_response=False)
+                    call_the_function = {
+                        'response_function': response_function,
+                        'parameters': {
+                            'user': user,
+                            'data': data,
+                            'is_response': False
+                        }
+                    }
+                    return call_the_function
             
             # error
             print('response to show introduction error! info:')
@@ -295,7 +358,17 @@ class BotDataCenter(object):
         else:
             message = "Hello, I'm School Bot, nice to meet you! What do want to know?"
             print(message)
-            self.send_poll(user, message, poll_configs, 'show_introduction')
+            call_the_function = {
+                'response_function': 'send_poll',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'poll_configs': poll_configs,
+                    'response_function': 'show_introduction',
+                    'keep_current_talk': False
+                }
+            }
+            return call_the_function
 
         return None
 
@@ -319,8 +392,15 @@ class BotDataCenter(object):
                     self.talks.pop(user['id'])
 
                     # call the function
-                    getattr(self, response_function)(user=user, data=data, is_response=False)
-                    return None
+                    call_the_function = {
+                        'response_function': response_function,
+                        'parameters': {
+                            'user': user,
+                            'data': data,
+                            'is_response': False
+                        }
+                    }
+                    return call_the_function
             
             # error
             print('response to show introduction error! info:')
@@ -330,7 +410,17 @@ class BotDataCenter(object):
             message = "You could check school basic info by select first option."
             message += "\nOr check your latest 10 query history."
             print(message)
-            self.send_poll(user, message, poll_configs, 'school_info_and_query_history')
+            call_the_function = {
+                'response_function': 'send_poll',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'poll_configs': poll_configs,
+                    'response_function': 'school_info_and_query_history',
+                    'keep_current_talk': False
+                }
+            }
+            return call_the_function
 
         return None
 
@@ -359,8 +449,15 @@ class BotDataCenter(object):
         # save query history
         self.save_history(user['id'], self.QUERY_HISTORY_SCHOOL_INFO, message)
 
-        return self.status_post(user, message)
-
+        call_the_function = {
+            'response_function': 'status_post',
+            'parameters': {
+                'user': user,
+                'message': message,
+                'poll_configs': None
+            }
+        }
+        return call_the_function
 
     def class_info(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
@@ -407,12 +504,12 @@ class BotDataCenter(object):
                         continue
     
                     cursor = self.connection.cursor()
-                    sql = "SELECT id, name from school_info_coursetemplate WHERE course_code = '{}' AND deleted_at is NULL;".format(word)
+                    sql = "SELECT id, name from school_info_coursetemplate WHERE course_code like '%{}%' AND deleted_at is NULL;".format(word.upper())
                     cursor.execute(sql)
                     result = cursor.fetchall()
                     for id, name in result:
                         print("find course info: id is {}, name is {}, course code is {}".format(id, name, word))
-                        course_code = word
+                        course_code = word.upper()
                         break
                     if course_code != None:
                         break
@@ -424,29 +521,30 @@ class BotDataCenter(object):
                     print('change talk:', self.talks[user['id']])
 
                     message = "For searching what you want, could you tell me what grade you want ?"
-                    self.start_querying(user, message, 'class_info', keep_current_talk=True)
-
-                    # debug print talk
-                    talk = self.talks[user['id']]
-                    course_code = None
-                    grade = None
-                    course_id = None
-
-                    if 'course_code' in talk['data']:
-                        course_code = talk['data']['course_code']
-                    if 'grade' in talk['data']:
-                        grade = talk['data']['grade']
-                    if 'course_id' in talk['data']:
-                        course_id = int(talk['data']['course_id'])
-
-                    print('reading answers for class info, in current talk, course code is {}, grade is {}, course id is {}'.format(course_code, grade, str(course_id)))
-                    print('change talk:', self.talks[user['id']])
-                    return None
+                    # call the function
+                    call_the_function = {
+                        'response_function': 'start_querying',
+                        'parameters': {
+                            'user': user,
+                            'message': message,
+                            'response_function': 'class_info',
+                            'keep_current_talk': True
+                        }
+                    }
+                    return call_the_function
 
                 # not found, ask for course code again
                 message = "Sorry we can't find any course by your input {}, could you please try again ?".format(received_message)
-                self.start_querying(user, message, 'class_info')
-                return None
+                call_the_function = {
+                    'response_function': 'start_querying',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'response_function': 'class_info',
+                        'keep_current_talk': False
+                    }
+                }
+                return call_the_function
             elif grade is None:
                 print('reading answers as course code')
 
@@ -479,15 +577,32 @@ class BotDataCenter(object):
                     self.talks[user['id']]['data']['course_id'] = course_id
 
                     message = "What do you want to know about {}({}), please select following option.".format(course_code, grade)
-                    self.send_poll(user, message, poll_configs, 'class_info', keep_current_talk=True)
-                    return None
+                    call_the_function = {
+                        'response_function': 'send_poll',
+                        'parameters': {
+                            'user': user,
+                            'message': message,
+                            'poll_configs': poll_configs,
+                            'response_function': 'class_info',
+                            'keep_current_talk': True
+                        }
+                    }
+                    return call_the_function
 
                 # not found, ask for course id again
                 message = "For searching what you want, could you tell me what grade you want ?"
                 message = "Sorry we can't find any course({}) by grade in your input {}, could you please try again ?".format(course_code, received_message)
 
-                self.start_querying(user, message, 'class_info', keep_current_talk=True)
-                return None
+                call_the_function = {
+                    'response_function': 'start_querying',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'response_function': 'class_info',
+                        'keep_current_talk': True
+                    }
+                }
+                return call_the_function
             else:
                 print('this input is illegal!')
                 return None
@@ -504,8 +619,15 @@ class BotDataCenter(object):
                     self.talks[user['id']]['data']['poll_configs'] = poll_configs
 
                     # call the function
-                    getattr(self, response_function)(user=user, data=data, is_response=True)
-                    return None
+                    call_the_function = {
+                        'response_function': response_function,
+                        'parameters': {
+                            'user': user,
+                            'data': data,
+                            'is_response': True
+                        }
+                    }
+                    return call_the_function
 
             # error
             print('this selected option is illegal!')
@@ -513,7 +635,17 @@ class BotDataCenter(object):
 
         else:
             message = "For searching what you want, could you tell me what course code of course you want ?"
-            self.start_querying(user, message, 'class_info')
+
+            call_the_function = {
+                'response_function': 'start_querying',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'response_function': 'class_info',
+                    'keep_current_talk': False
+                }
+            }
+            return call_the_function
 
         return None
 
@@ -536,7 +668,18 @@ class BotDataCenter(object):
             # display result and ask again
             message = "Sorry, not found {}({}) recent exam.".format(course_code, grade)
             message += "\nWhat do you want to know about {}({}), please select following option.".format(course_code, grade)
-            self.send_poll(user, message, poll_configs, 'class_info', keep_current_talk=True)
+            call_the_function = {
+                'response_function': 'send_poll',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'poll_configs': poll_configs,
+                    'response_function': 'class_info',
+                    'keep_current_talk': True
+                }
+            }
+            return call_the_function
+
         else:
             # display result and ask again
             name, description,exam_at, exam_type, location, url = result
@@ -560,7 +703,17 @@ class BotDataCenter(object):
             message += "\nmore info: {}".format(url)
             message += "\n"
             message += "\nWhat do you want to know about {}({}), please select following option.".format(course_code, grade)
-            self.send_poll(user, message, poll_configs, 'class_info', keep_current_talk=True)
+            call_the_function = {
+                'response_function': 'send_poll',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'poll_configs': poll_configs,
+                    'response_function': 'class_info',
+                    'keep_current_talk': True
+                }
+            }
+            return call_the_function
 
         return None
     def get_recent_assignment_info(self, user, data=None, is_response=False):
@@ -585,7 +738,18 @@ class BotDataCenter(object):
             # display result and ask again
             message = "Sorry, not found {}({}) recent assignment.".format(course_code, grade)
             message += "\nWhat do you want to know about {}({}), please select following option.".format(course_code, grade)
-            self.send_poll(user, message, poll_configs, 'class_info', keep_current_talk=True)
+            call_the_function = {
+                'response_function': 'send_poll',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'poll_configs': poll_configs,
+                    'response_function': 'class_info',
+                    'keep_current_talk': True
+                }
+            }
+            return call_the_function
+
         else:
             # display result and ask again
             name, description, deadline_at, url = result
@@ -603,7 +767,17 @@ class BotDataCenter(object):
             message += "\nmore info: {}".format(url)
             message += "\n"
             message += "\nWhat do you want to know about {}({}), please select following option.".format(course_code, grade)
-            self.send_poll(user, message, poll_configs, 'class_info', keep_current_talk=True)
+            call_the_function = {
+                'response_function': 'send_poll',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'poll_configs': poll_configs,
+                    'response_function': 'class_info',
+                    'keep_current_talk': True
+                }
+            }
+            return call_the_function
 
         return None
     
@@ -634,6 +808,7 @@ class BotDataCenter(object):
             
             input_user_name = " ".join(words)
             search_name = "%".join(words)
+            search_name = search_name.lower()
 
             cursor = self.connection.cursor()
             sql = "SELECT user_name, email from school_info_teachingassistant WHERE user_name like '%{}%' AND deleted_at is NULL;".format(search_name.lower())
@@ -643,8 +818,17 @@ class BotDataCenter(object):
             if result is None:
                 # not found, ask for name again
                 message = "Sorry we can't find any teaching assistant who's name is {}, could you please try again ?".format(input_user_name)
-                self.start_querying(user, message, 'make_appointment', keep_current_talk=True)
-                return None
+                call_the_function = {
+                    'response_function': 'start_querying',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'response_function': 'make_appointment',
+                        'keep_current_talk': True
+                    }
+                }
+                return call_the_function
+
             else:
                 # clean current talk
                 self.talks.pop(user['id'])
@@ -656,11 +840,28 @@ class BotDataCenter(object):
                 # save query history
                 title = self.QUERY_HISTORY_TEACHING_ASSISTANT_INFO+": {}".format(teaching_assistant_name)
                 self.save_history(user['id'], title, message)
+                call_the_function = {
+                    'response_function': 'status_post',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'poll_options': None
+                    }
+                }
+                return call_the_function
 
-                return self.status_post(user, message)
         else:
             message = "Please tell me the teaching assistant name who you want to make an appointment."
-            self.start_querying(user, message, 'make_appointment')
+            call_the_function = {
+                'response_function': 'start_querying',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'response_function': 'make_appointment',
+                    'keep_current_talk': False
+                }
+            }
+            return call_the_function
 
         return None
 
@@ -684,8 +885,15 @@ class BotDataCenter(object):
                     self.talks.pop(user['id'])
 
                     # call the function
-                    getattr(self, response_function)(user=user, data=data)
-                    return None
+                    call_the_function = {
+                        'response_function': response_function,
+                        'parameters': {
+                            'user': user,
+                            'data': data,
+                            'is_response': False
+                        }
+                    }
+                    return call_the_function
 
             # error
             print('response to feedback error! info:')
@@ -693,7 +901,18 @@ class BotDataCenter(object):
         else:
             message = "You can select teaching evaluate and scoring for the class and make some suggestions!"
             message += "\nIf you have some questions, but just can't find answer by our bot, you can select other questions option and tell us."
-            self.send_poll(user, message, poll_configs, 'feedback')
+            call_the_function = {
+                'response_function': 'send_poll',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'poll_configs': poll_configs,
+                    'response_function': 'feedback',
+                    'keep_current_talk': False
+                }
+            }
+            return call_the_function
+
 
         return None
 
@@ -742,12 +961,12 @@ class BotDataCenter(object):
                         continue
     
                     cursor = self.connection.cursor()
-                    sql = "SELECT id, name from school_info_coursetemplate WHERE course_code = '{}' AND deleted_at is NULL;".format(word)
+                    sql = "SELECT id, name from school_info_coursetemplate WHERE course_code like '{}%' AND deleted_at is NULL;".format(word.upper())
                     cursor.execute(sql)
                     result = cursor.fetchall()
                     for id, name in result:
                         print("find course info: id is {}, name is {}, course code is {}".format(id, name, word))
-                        course_code = word
+                        course_code = word.upper()
                         break
                     if course_code != None:
                         break
@@ -759,13 +978,32 @@ class BotDataCenter(object):
                     print('change talk:', self.talks[user['id']])
 
                     message = "Please relying grade."
-                    self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                    return None
+                    call_the_function = {
+                        'response_function': 'start_querying',
+                        'parameters': {
+                            'user': user,
+                            'message': message,
+                            'response_function': 'teach_feedback',
+                            'keep_current_talk': True
+                        }
+                    }
+                    return call_the_function
+
 
                 # not found, ask for course code again
                 message = "Sorry we can't find any course by your input {}, could you please try again ?".format(received_message)
-                self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                return None
+                call_the_function = {
+                    'response_function': 'start_querying',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'response_function': 'teach_feedback',
+                        'keep_current_talk': True
+                    }
+                }
+                return call_the_function
+
+
             elif grade is None:
                 print('reading answers as course code')
 
@@ -798,14 +1036,30 @@ class BotDataCenter(object):
                     self.talks[user['id']]['data']['course_id'] = course_id
 
                     message = "Please scoring {}({}) from 0~10.".format(course_code, grade)
-                    self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                    return None
+                    call_the_function = {
+                        'response_function': 'start_querying',
+                        'parameters': {
+                            'user': user,
+                            'message': message,
+                            'response_function': 'teach_feedback',
+                            'keep_current_talk': True
+                        }
+                    }
+                    return call_the_function
 
                 # not found, ask for course id again
                 message = "Sorry we can't find any course({}) by grade in your input {}, could you please try again ?".format(course_code, received_message)
+                call_the_function = {
+                    'response_function': 'start_querying',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'response_function': 'teach_feedback',
+                        'keep_current_talk': True
+                    }
+                }
+                return call_the_function
 
-                self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                return None
             elif score is None:
                 print('reading answers as score')
 
@@ -821,14 +1075,31 @@ class BotDataCenter(object):
                 # check score whether is correct
                 if score < 0 or score > 10:
                     message = "Score must be 0~10 number, please try again."
-                    self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                    return None
+                    call_the_function = {
+                        'response_function': 'start_querying',
+                        'parameters': {
+                            'user': user,
+                            'message': message,
+                            'response_function': 'teach_feedback',
+                            'keep_current_talk': True
+                        }
+                    }
+                    return call_the_function
                 
                 # save score
                 self.talks[user['id']]['data']['score'] = score
 
                 message = "If you have any suggestions, you can reply me. If not, just reply -1."
-                self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
+                call_the_function = {
+                    'response_function': 'start_querying',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'response_function': 'teach_feedback',
+                        'keep_current_talk': True
+                    }
+                }
+                return call_the_function
             
             elif suggestion is None:
                 print('reading answers as suggestion')
@@ -856,16 +1127,40 @@ class BotDataCenter(object):
                 self.talks.pop(user['id'])
                 # display the info
                 message = "Submit success! Thank for your feedback very much :)"
-                return self.status_post(user, message)
-
+                call_the_function = {
+                    'response_function': 'status_post',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'poll_options': None
+                    }
+                }
+                return call_the_function
             else:
                 print('this input is illegal!')
-                self.start_querying(user, message, 'teach_feedback', keep_current_talk=True)
-                return None
+                call_the_function = {
+                    'response_function': 'start_querying',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'response_function': 'teach_feedback',
+                        'keep_current_talk': True
+                    }
+                }
+                return call_the_function
 
         else:
             message = "Please tell me which course you want to scoring by relying the course code."
-            self.start_querying(user, message, 'teach_feedback')
+            call_the_function = {
+                'response_function': 'start_querying',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'response_function': 'teach_feedback',
+                    'keep_current_talk': False
+                }
+            }
+            return call_the_function
 
     def question_history(self, user, data=None, is_response=False):
         print('call function {} ...'.format(self.whoami()))
@@ -915,8 +1210,17 @@ class BotDataCenter(object):
                 query_index -= 1 # the real index is from 0
             except Exception as err:
                 message = "Please input 1~{} number :)".format(len(latest_10_query_history))
-                self.start_querying(user, message, 'question_history', keep_current_talk=True)
-                return None
+                call_the_function = {
+                    'response_function': 'start_querying',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'response_function': 'question_history',
+                        'keep_current_talk': True
+                    }
+                }
+                return call_the_function
+
 
             # debug
             print('get anaswer index {}'.format(query_index))
@@ -932,8 +1236,16 @@ class BotDataCenter(object):
                     message += "\n{}. {}".format(index, title)
                     index += 1
                 message += "\nPlease reply the id of which query history you want to view."
-                self.start_querying(user, message, 'question_history', keep_current_talk=True)
-                return None
+                call_the_function = {
+                    'response_function': 'start_querying',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'response_function': 'question_history',
+                        'keep_current_talk': True
+                    }
+                }
+                return call_the_function
 
             # display the query result
             title, content = latest_10_query_history[query_index]
@@ -943,8 +1255,16 @@ class BotDataCenter(object):
 
             # clean current talk
             self.talks.pop(user['id'])
+            call_the_function = {
+                'response_function': 'status_post',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'poll_options': None
+                }
+            }
+            return call_the_function
 
-            return self.status_post(user, message)
         else:
             cursor = self.connection.cursor()
             sql = "SELECT query_title, query_content from school_info_queryhistory WHERE user_id = {} AND deleted_at is NULL ORDER BY updated_at DESC LIMIT 10;".format(user['id'])
@@ -955,8 +1275,15 @@ class BotDataCenter(object):
             if result is None:
                 self.talks.pop(user['id'])
                 message = "Sorry, you don't have query history."
-                self.status_post(user, message)
-                return None
+                call_the_function = {
+                    'response_function': 'status_post',
+                    'parameters': {
+                        'user': user,
+                        'message': message,
+                        'poll_options': None
+                    }
+                }
+                return call_the_function
 
             # 2. Find History, just leave selection
             message = "Your recent query history is:"
@@ -967,8 +1294,16 @@ class BotDataCenter(object):
                 message += "\n{}. {}".format(index, title)
                 index += 1
             message += "\nPlease reply the id of which query history you want to view."
-
-            self.start_querying(user, message, 'question_history')
+            call_the_function = {
+                'response_function': 'start_querying',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'response_function': 'question_history',
+                    'keep_current_talk': False
+                }
+            }
+            return call_the_function
 
         return None
 
@@ -1006,10 +1341,28 @@ class BotDataCenter(object):
             self.talks.pop(user['id'])
             # display the info
             message = "Submit success! Thank for your feedback very much :)"
-            return self.status_post(user, message)
+            call_the_function = {
+                'response_function': 'status_post',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'poll_options': None
+                }
+            }
+            return call_the_function
+
         else:
             message = "Please input your question, we would answer it later."
-            self.start_querying(user, message, 'other_questions')
+            call_the_function = {
+                'response_function': 'start_querying',
+                'parameters': {
+                    'user': user,
+                    'message': message,
+                    'response_function': 'other_questions',
+                    'keep_current_talk': False
+                }
+            }
+            return call_the_function
 
         return None
     
