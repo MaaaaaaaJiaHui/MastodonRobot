@@ -39,21 +39,18 @@ class BotDataCenter(object):
         return inspect.stack()[1][3]
 
     def __init__(self, mastodon, connection, talks={}):
-        print('call function {} ...'.format(self.whoami()))
         self.connection = connection
         self.mastodon = mastodon
         self.talks = talks
 
     def check_talks(self):
-        # print('call function {} ...'.format(self.whoami()))
         """
         look each talk and reply the answers
         """
         # remove expired talk
         self.clean_expired_talks()
 
-        if len(self.talks) > 0:
-            print('current exists {} talks.'.format(len(self.talks)))
+        # if len(self.talks) > 0:
 
         # check polls
         # call the response function if poll was voted
@@ -73,7 +70,6 @@ class BotDataCenter(object):
                 # read poll
                 target_poll = self.mastodon.poll(poll_id)
 
-                # print voted result
                 selected_option = None
                 for poll_option in target_poll["options"]:
                     if poll_option["votes_count"] > 0:
@@ -84,12 +80,8 @@ class BotDataCenter(object):
                 if selected_option is None:
                     continue
 
-                print('get user(id:{}) {}'.format(str(user['id']), user['username']))
-                print('talk action:', action)
-                print('talk response function:', response_function)
 
                 # call response function
-                print('select {}'.format(selected_option))
 
                 # handle special selection
                 if selected_option == self.SPECIAL_SELECTION_QUIT_SEARCHING:
@@ -112,7 +104,6 @@ class BotDataCenter(object):
         return None
     
     def start_talk(self, user, mention):
-        print('call function {} ...'.format(self.whoami()))
         """
         if there are no continue talk, just start a new talk
         if there is a talk for the current user, just do something depends on the action
@@ -202,7 +193,6 @@ class BotDataCenter(object):
 
     # remove expired talk
     def clean_expired_talks(self):
-        # print('call function {} ...'.format(self.whoami()))
         if len(self.talks) <= 0:
             return None
         
@@ -213,13 +203,10 @@ class BotDataCenter(object):
 
             # if expired, just remove talk record
             if datetime.datetime.now() > expired_time:
-                print('The talk expired, now we remove it. Removed talk info:')
-                print(self.talks[user_id])
                 self.talks.pop(user_id)
         return None
     
     def status_post(self, user, message, poll_options = None):
-        print('call function {} ...'.format(self.whoami()))
         """
         Send only message
         """
@@ -230,12 +217,10 @@ class BotDataCenter(object):
         if poll_options != None:
             poll = self.mastodon.make_poll(options=poll_options, expires_in=5000)
 
-        print('status post :', full_message)
 
         return self.mastodon.status_post(status=full_message, visibility="direct", poll=poll)
 
     def send_poll(self, user, message, poll_configs, response_function, keep_current_talk=False):
-        print('call function {} ...'.format(self.whoami()))
         """
         send a poll and update the talk record
         """
@@ -268,7 +253,6 @@ class BotDataCenter(object):
         start querying something by continue asking
         we would add a exit option for end this asking
         """
-        print('call function {} ...'.format(self.whoami()))
         """
         send a poll and update the talk record
         """
@@ -279,7 +263,6 @@ class BotDataCenter(object):
             (self.SPECIAL_SELECTION_BACK_TO_ROOT, 'show_introduction', None),
         ]
         message += "(If you want to end the searching, just select the following option.)"
-        print('query:', message)
 
         # make poll options
         poll_options = []
@@ -310,7 +293,6 @@ class BotDataCenter(object):
         let user exit from current asking
         just remove current talk
         """
-        print('quit from current talk!')
         message = "Talk end, thanks for talking with me :)"
         self.status_post(user, message)
         return None
@@ -319,7 +301,6 @@ class BotDataCenter(object):
     # all the talk detail functions paras should be: user, data=None, is_response=False
     # =======================================================
     def show_introduction(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
         """
         Introduce the bot functions.
         """
@@ -352,12 +333,9 @@ class BotDataCenter(object):
                     return call_the_function
             
             # error
-            print('response to show introduction error! info:')
-            print(data['selected_option'])
 
         else:
             message = "Hello, I'm School Bot, nice to meet you! What do want to know?"
-            print(message)
             call_the_function = {
                 'response_function': 'send_poll',
                 'parameters': {
@@ -373,7 +351,6 @@ class BotDataCenter(object):
         return None
 
     def school_info_and_query_history(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
         """
         Introduce the bot functions.
         """
@@ -403,13 +380,10 @@ class BotDataCenter(object):
                     return call_the_function
             
             # error
-            print('response to show introduction error! info:')
-            print(data['selected_option'])
 
         else:
             message = "You could check school basic info by select first option."
             message += "\nOr check your latest 10 query history."
-            print(message)
             call_the_function = {
                 'response_function': 'send_poll',
                 'parameters': {
@@ -425,7 +399,6 @@ class BotDataCenter(object):
         return None
 
     def school_info(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
         """
         Display school info, let students choose options
         """
@@ -437,7 +410,6 @@ class BotDataCenter(object):
         cursor.execute(sql)
         result = cursor.fetchall()
         for id, info_name, info_value in result:
-            print("info: id is {},name in {}，value is {}".format(id, info_name, info_value))
             school_info_dict[info_name] = info_value
 
         message = "What do you want to know about school? You can check the following links:"
@@ -460,7 +432,6 @@ class BotDataCenter(object):
         return call_the_function
 
     def class_info(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
         """
         Display info, let students choose options
         """
@@ -490,10 +461,8 @@ class BotDataCenter(object):
             soup = BeautifulSoup(mention["content"], "html.parser")
             received_message = soup.find('p').get_text().strip()
 
-            print('reading answers for class info, in current talk, course code is {}, grade is {}, course id is {}'.format(course_code, grade, str(course_id)))
 
             if course_code is None:
-                print('reading answers as course code')
 
                 # get course code from message
                 # search course code in database
@@ -508,7 +477,6 @@ class BotDataCenter(object):
                     cursor.execute(sql)
                     result = cursor.fetchall()
                     for id, name in result:
-                        print("find course info: id is {}, name is {}, course code is {}".format(id, name, word))
                         course_code = word.upper()
                         break
                     if course_code != None:
@@ -518,7 +486,6 @@ class BotDataCenter(object):
                 # ask for grade
                 if course_code != None:
                     talk['data']['course_code'] = course_code
-                    print('change talk:', self.talks[user['id']])
 
                     message = "For searching what you want, could you tell me what grade you want ?"
                     # call the function
@@ -546,7 +513,6 @@ class BotDataCenter(object):
                 }
                 return call_the_function
             elif grade is None:
-                print('reading answers as course code')
 
                 # get grade from message
                 # search grade in database
@@ -563,7 +529,6 @@ class BotDataCenter(object):
                     result = cursor.fetchall()
                     for id in result:
                         id = id[0]
-                        print("find course info: id is {}".format(id))
                         grade = word
                         course_id = id
                         break
@@ -604,13 +569,11 @@ class BotDataCenter(object):
                 }
                 return call_the_function
             else:
-                print('this input is illegal!')
                 return None
         elif is_response is True and 'selected_option' in data and course_code != None and grade != None:
             # get selection
             selected_option = data['selected_option']
 
-            print('now we know course code and grade, reading selected option {} query'.format(selected_option))
 
             # response
             for option, response_function, parameters in poll_configs:
@@ -630,7 +593,6 @@ class BotDataCenter(object):
                     return call_the_function
 
             # error
-            print('this selected option is illegal!')
             return None
 
         else:
@@ -659,10 +621,8 @@ class BotDataCenter(object):
 
         cursor = self.connection.cursor()
         sql = "SELECT name, description,exam_at, exam_type, location, url from school_info_exam WHERE course_id = {} AND exam_at >= '{}' AND deleted_at is NULL ORDER BY exam_at ASC;".format(course_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        print('SQL:{}'.format(sql))
         cursor.execute(sql)
         result = cursor.fetchone()
-        print('result:',result)
 
         if result is None:
             # display result and ask again
@@ -683,7 +643,6 @@ class BotDataCenter(object):
         else:
             # display result and ask again
             name, description,exam_at, exam_type, location, url = result
-            print("find recent exam is {} {} {} {} {} {}".format(name, description,exam_at, exam_type, location, url))
 
             message = "The recent exam:"
             message += "\n{}".format(name)
@@ -729,10 +688,8 @@ class BotDataCenter(object):
 
         cursor = self.connection.cursor()
         sql = "SELECT name, description, deadline_at, url from school_info_assignment WHERE course_id = {} AND deadline_at >= '{}' AND deleted_at is NULL ORDER BY deadline_at ASC;".format(course_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        print('SQL:{}'.format(sql))
         cursor.execute(sql)
         result = cursor.fetchone()
-        print('result:',result)
 
         if result is None:
             # display result and ask again
@@ -753,7 +710,6 @@ class BotDataCenter(object):
         else:
             # display result and ask again
             name, description, deadline_at, url = result
-            print("find recent assignment is {} {} {} {}".format(name, description, deadline_at, url))
 
             message = "The recent assignment:"
             message += "\n{}".format(name)
@@ -782,7 +738,6 @@ class BotDataCenter(object):
         return None
     
     def make_appointment(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
         """
         Ask for teaching assistant's name and display the contact info.
         """
@@ -796,7 +751,6 @@ class BotDataCenter(object):
             soup = BeautifulSoup(mention["content"], "html.parser")
             received_message = soup.find('p').get_text().strip()
 
-            print('reading answers for making appointment ...')
 
             # get course code from message
             # search course code in database
@@ -866,7 +820,6 @@ class BotDataCenter(object):
         return None
 
     def feedback(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
         """
         Display info, let students choose options
         """
@@ -896,8 +849,6 @@ class BotDataCenter(object):
                     return call_the_function
 
             # error
-            print('response to feedback error! info:')
-            print(data['selected_option'])
         else:
             message = "You can select teaching evaluate and scoring for the class and make some suggestions!"
             message += "\nIf you have some questions, but just can't find answer by our bot, you can select other questions option and tell us."
@@ -917,7 +868,6 @@ class BotDataCenter(object):
         return None
 
     def teach_feedback(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
         """
         1. Ask for scoring from 1~10.
         2. Ask for suggestion.
@@ -947,10 +897,8 @@ class BotDataCenter(object):
             soup = BeautifulSoup(mention["content"], "html.parser")
             received_message = soup.find('p').get_text().strip()
 
-            print('reading answers for teaching feedback, in current talk, course code is {}, grade is {}, course id is {}'.format(course_code, grade, str(course_id)))
 
             if course_code is None:
-                print('reading answers as course code')
 
                 # get course code from message
                 # search course code in database
@@ -965,7 +913,6 @@ class BotDataCenter(object):
                     cursor.execute(sql)
                     result = cursor.fetchall()
                     for id, name in result:
-                        print("find course info: id is {}, name is {}, course code is {}".format(id, name, word))
                         course_code = word.upper()
                         break
                     if course_code != None:
@@ -975,7 +922,6 @@ class BotDataCenter(object):
                 # ask for grade
                 if course_code != None:
                     talk['data']['course_code'] = course_code
-                    print('change talk:', self.talks[user['id']])
 
                     message = "Please relying grade."
                     call_the_function = {
@@ -1005,7 +951,6 @@ class BotDataCenter(object):
 
 
             elif grade is None:
-                print('reading answers as course code')
 
                 # get grade from message
                 # search grade in database
@@ -1022,7 +967,6 @@ class BotDataCenter(object):
                     result = cursor.fetchall()
                     for id in result:
                         id = id[0]
-                        print("find course info: id is {}".format(id))
                         grade = word
                         course_id = id
                         break
@@ -1061,7 +1005,6 @@ class BotDataCenter(object):
                 return call_the_function
 
             elif score is None:
-                print('reading answers as score')
 
                 # get score from message
                 score = None
@@ -1102,7 +1045,6 @@ class BotDataCenter(object):
                 return call_the_function
             
             elif suggestion is None:
-                print('reading answers as suggestion')
 
                 # get suggestion from message
                 suggestion = None
@@ -1137,7 +1079,6 @@ class BotDataCenter(object):
                 }
                 return call_the_function
             else:
-                print('this input is illegal!')
                 call_the_function = {
                     'response_function': 'start_querying',
                     'parameters': {
@@ -1163,7 +1104,6 @@ class BotDataCenter(object):
             return call_the_function
 
     def question_history(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
         """
         If can't find query history, display there are no query history.
         If not, display latest 10 query history..
@@ -1195,7 +1135,6 @@ class BotDataCenter(object):
             soup = BeautifulSoup(mention["content"], "html.parser")
             received_message = soup.find('p').get_text().strip()
 
-            print('reading question which we need to save ...')
 
             # get course code from message
             # search course code in database
@@ -1223,7 +1162,6 @@ class BotDataCenter(object):
 
 
             # debug
-            print('get anaswer index {}'.format(query_index))
             # debug
 
             # check if input illegal, let user try again
@@ -1308,7 +1246,6 @@ class BotDataCenter(object):
         return None
 
     def other_questions(self, user, data=None, is_response=False):
-        print('call function {} ...'.format(self.whoami()))
         """
         Ask for record new questions.
         """
@@ -1320,7 +1257,6 @@ class BotDataCenter(object):
             soup = BeautifulSoup(mention["content"], "html.parser")
             received_message = soup.find('p').get_text().strip()
 
-            print('reading question which we need to save ...')
 
             # get course code from message
             # search course code in database

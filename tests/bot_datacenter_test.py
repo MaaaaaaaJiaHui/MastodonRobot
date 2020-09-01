@@ -19,28 +19,33 @@ class WidgetTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         # Init connection to db.
-        self.connection = pymysql.connect(host='localhost', user='root',password='',database='mastodon_bot',charset="utf8")
+        self.connection = pymysql.connect(host='localhost', user='root',password='',database='test_mastodon_bot',charset="utf8")
 
         # set basic data
         cursor = self.connection.cursor()
         now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         future_time = (datetime.datetime.now()+datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
         sql = ''
-        sql += "TRUNCATE `mastodon_bot`.`school_info_coursetemplate`;"
-        sql += "TRUNCATE `mastodon_bot`.`school_info_teacher`;"
-        sql += "TRUNCATE `mastodon_bot`.`school_info_course`;"
-        sql += "TRUNCATE `mastodon_bot`.`school_info_teachingassistant`;"
-        sql += "TRUNCATE `mastodon_bot`.`school_info_exam`;"
-        sql += "TRUNCATE `mastodon_bot`.`school_info_assignment`;"
+        sql += "TRUNCATE `test_mastodon_bot`.`school_info_schoolinfo`;"
+        sql += "TRUNCATE `test_mastodon_bot`.`school_info_coursetemplate`;"
+        sql += "TRUNCATE `test_mastodon_bot`.`school_info_teacher`;"
+        sql += "TRUNCATE `test_mastodon_bot`.`school_info_course`;"
+        sql += "TRUNCATE `test_mastodon_bot`.`school_info_teachingassistant`;"
+        sql += "TRUNCATE `test_mastodon_bot`.`school_info_exam`;"
+        sql += "TRUNCATE `test_mastodon_bot`.`school_info_assignment`;"
 
         sqls = sql.split(';')
         for sql_command in sqls:
             if sql_command == '':
                 continue
-            print("running {} ...".format(sql_command[:15]))
             cursor.execute(sql_command)
         
         sql = ''
+
+        sql += "INSERT INTO `school_info_schoolinfo` (`id`, `info_name`, `info_value`, `created_at`, `updated_at`, `deleted_at`) VALUES (1, 'school_newbie_info', 'https://www.baidu.com', '2020-07-26 12:29:23.000000', '2020-07-26 16:13:14.179961', NULL);"
+        sql += "INSERT INTO `school_info_schoolinfo` (`id`, `info_name`, `info_value`, `created_at`, `updated_at`, `deleted_at`) VALUES (2, 'school_official_website', 'https://www.google.com', '2020-07-26 12:28:27.000000', '2020-07-26 12:28:27.000000', NULL);"
+        sql += "INSERT INTO `school_info_schoolinfo` (`id`, `info_name`, `info_value`, `created_at`, `updated_at`, `deleted_at`) VALUES (3, 'school_contact_info', 'https://www.google.com', '2020-07-26 12:28:27.000000', '2020-07-26 12:28:27.000000', NULL);"
+        sql += "INSERT INTO `school_info_schoolinfo` (`id`, `info_name`, `info_value`, `created_at`, `updated_at`, `deleted_at`) VALUES (4, 'school_f_and_q', 'https://www.twitter.com', '2020-07-26 12:29:23.000000', '2020-07-26 16:13:28.118937', NULL);"
 
         sql += "INSERT INTO `school_info_coursetemplate` (`id`, `created_at`, `updated_at`, `deleted_at`, `course_code`, `name`) VALUES (1, '2020-08-10 02:07:42.739913', '2020-08-10 02:07:42.739913', NULL, 'CS12345', 'Computer Science');"
         sql += "INSERT INTO `school_info_teacher` (`id`, `created_at`, `updated_at`, `deleted_at`, `user_name`, `email`) VALUES (1, '2020-08-09 00:49:11.868890', '2020-08-09 00:49:11.868890', NULL, 'jane', 'jane@example.com');"
@@ -54,7 +59,6 @@ class WidgetTestCase(unittest.TestCase):
         for sql_command in sqls:
             if sql_command == '':
                 continue
-            print("running {} ...".format(sql_command[:30]))
             cursor.execute(sql_command)
 
         # Init datacenter, we would use it to test all.
@@ -174,7 +178,6 @@ class WidgetTestCase(unittest.TestCase):
         }
         user = {'id':123, 'username':'test_user'}
         result = self.datacenter.get_recent_assignment_info(user)
-        print(result)
         self.assertNotEqual(result['parameters']['message'].find('The recent assignment:'), -1, 'Could not display exists assignment.')
 
         self.datacenter.talks[123]['data']['course_id'] = 100

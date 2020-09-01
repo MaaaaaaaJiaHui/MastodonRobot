@@ -27,15 +27,7 @@ class HelloBot(PineappleBot):
         self.connection = pymysql.connect(host='localhost', user='root',password='',database='mastodon_bot',charset="utf8")
 
         self.datacenter = bot_datacenter.BotDataCenter(mastodon=self.mastodon, connection=self.connection)
-    
-    def on_notification(self, notif):
-        super().on_notification(notif)
 
-        # print('收到消息:')
-        # print(notif)
-
-        # logging.info("Got a {} from {} at {}".format(notif["type"], notif["account"]["username"], notif["created_at"]))
-        # notif_type = notif["type"]
     
     @interval(3)
     def test2(self):
