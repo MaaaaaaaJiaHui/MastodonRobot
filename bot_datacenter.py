@@ -80,7 +80,6 @@ class BotDataCenter(object):
                 if selected_option is None:
                     continue
 
-
                 # call response function
 
                 # handle special selection
@@ -90,7 +89,8 @@ class BotDataCenter(object):
                     return None
                 if selected_option == self.SPECIAL_SELECTION_BACK_TO_ROOT:
                     self.talks.pop(user['id'])
-                    self.show_introduction(user)
+                    result = self.show_introduction(user)
+                    self.call_the_function_by_result(result)
                     return None
 
                     
