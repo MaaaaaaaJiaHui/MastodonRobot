@@ -155,7 +155,7 @@ class BotDataCenter(object):
                 self.status_post(
                     user=parameters['user'], 
                     message=parameters['message'], 
-                    poll_configs=parameters['poll_configs'], 
+                    poll_options=parameters['poll_options'], 
                 )
                 break
             elif response_function == 'send_poll':
