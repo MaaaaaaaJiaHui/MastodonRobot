@@ -426,7 +426,7 @@ class BotDataCenter(object):
             'parameters': {
                 'user': user,
                 'message': message,
-                'poll_configs': None
+                'poll_options': None
             }
         }
         return call_the_function
