@@ -30,7 +30,10 @@ It would install packages:
 After installing the python dependencies above, perform the following Django migration operation and create a new backend table:
 1. Create a database in the MYSQL database named mastodon_bot, and set the account name is root, password is null.
 2. Enter the project directory.
-3. Execute python manage.py migrate.
+3. Execute command:
+```
+python manage.py migrate
+```
 
 > You could change the database settings by editing next files:
 > 
@@ -43,15 +46,15 @@ After installing the python dependencies above, perform the following Django mig
 To use bot client, it is necessary to make sure that user can connect locally to bot
 on the remote server.
 To achieve this, the following points need to be implemented:
-0. Copy the `config.cfg.example` to a new file `config.cfg`.
-1. Select a service provider and set up an account.
-2. Fill the domain name of the service provider into the domain of the local project file config.cfg.
-3. Log in and switch to account settings.
-4. Check the box "This is a robot account" in the general column.
-5. Switch to the Development TAB and add an application with any name.
-6. After adding the application, it can be seen in the Development TAB. Then, click
-the application and enter the detail page.
-7. Fill in client_id, client_secret and token in config.cfg from the detail page.
+
+1. Copy the `config.cfg.example` to a new file `config.cfg`.
+2. Select a service provider and set up an account.
+3. Fill the domain name of the service provider into the domain of the local project file config.cfg.
+4. Log in and switch to account settings.
+5. Check the box "This is a robot account" in the general column.
+6. Switch to the Development TAB and add an application with any name.
+7. After adding the application, it can be seen in the Development TAB. Then, click the application and enter the detail page.
+8. Fill in client_id, client_secret and token in config.cfg from the detail page.
 
 ```
 # config.cfg should looks like this:
