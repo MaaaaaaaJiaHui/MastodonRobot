@@ -1,6 +1,6 @@
 [HELLOBOT]
-class = hello.HelloBot
-domain = example.org
+class = bot.HelloBot
+domain = xxxxxxxxx
 client_id = xxxxxxxxx
 client_secret = xxxxxxxx
 access_token = xxxxxxxxxx

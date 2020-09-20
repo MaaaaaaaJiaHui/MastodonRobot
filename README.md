@@ -4,17 +4,81 @@
 
 Based on Mashtodon, this project implements a BOT, aiming to help teachers and provide help for the daily study and life of school students to improve their learning efficiency.
 
+## Environment Preparation
 
-## Significance
-1.	Now remote education is more and more important, the demand is more and more strong
-2.	Using automated robots to answer frequently asked questions, saving campus management manpower costs
-3.	Many existing chatbots need to input a lot of information for a single query, and the path is too long. Each time you ask a question again, you re-enter the query.
+### Basic environmental preparation
 
-## Function Description
-The robot's functions are mainly divided into the following five modules:
-1.	School basic information query Can check the school for the designated major, grade start time, fees, school contact information
-2.	Teaching information query Through the robot to query the designated major, grade corresponding class time, place, teacher contact information. Assignment requirements for this course, deadline, reference books; Examination information query, the robot can be used to query the specific subject of the examination time, place, teacher contact information, examination content guidance and reference links
-3.	Tutor meeting appointment
-4.	Collection of Classroom opinions You can grade the teacher teaching you and you can type/submit your opinion
-5.	Problem Collection
-If the above questions are not within the scope of the student's inquiry, the student can list the questions first. We will gather these questions in one place for the teacher to check and reply.
+1. Install Python 3.8
+2. Install MySQL 5.7
+
+### Preparation of the Python library
+
+After installing Python, it is necessary to install the following Python libraries by run the command:
+
+```
+pip3 install -r requirements.txt
+```
+It would install packages:
+
+1. Django
+2. Ananas
+3. pymysql
+4. bs4
+5. Mysqlclient
+
+### Basic Data Preparation
+After installing the python dependencies above, perform the following Django migration operation and create a new backend table:
+1. Create a database in the MYSQL database named mastodon_bot, and set the account name is root, password is null.
+2. Enter the project directory.
+3. Execute python manage.py migrate.
+
+> You could change the database settings by editing next files:
+> 
+> `bot.py`
+> 
+> `mastodonrobot\mastodonrobot\settings.py`
+
+### Mashtodon Account
+
+To use bot client, it is necessary to make sure that user can connect locally to bot
+on the remote server.
+To achieve this, the following points need to be implemented:
+0. Copy the `config.cfg.example` to a new file `config.cfg`.
+1. Select a service provider and set up an account.
+2. Fill the domain name of the service provider into the domain of the local project file config.cfg.
+3. Log in and switch to account settings.
+4. Check the box "This is a robot account" in the general column.
+5. Switch to the Development TAB and add an application with any name.
+6. After adding the application, it can be seen in the Development TAB. Then, click
+the application and enter the detail page.
+7. Fill in client_id, client_secret and token in config.cfg from the detail page.
+
+```
+# config.cfg should looks like this:
+[HELLOBOT]
+class = bot.HelloBot
+domain = <your instance name here>
+client_id = <your client key here>
+client_secret = <your client secret here>
+access_token = <your access token here>
+```
+
+## Run the server
+
+### Run the backend server
+
+Enter the project directory and perform the following operations to start the background manager program: 
+```
+python manage.py runserver
+```
+After the successful start, according to the command line instruction access to the specified link, it can enter the background management system and operate the data in the database.
+
+### Run the bot server
+
+At first, you need to start the MySQL server, because the bot need connect to the database at the next steps.
+
+Enter the project directory and execute the following command to start the bot client: 
+```
+ananas config.cfg
+```
+After successful startup, the bot account can be put into use.
