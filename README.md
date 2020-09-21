@@ -41,7 +41,7 @@ python manage.py migrate
 > 
 > `mastodonrobot\mastodonrobot\settings.py`
 
-### Mashtodon Account
+### Mastodon Account
 
 To use bot client, it is necessary to make sure that user can connect locally to bot
 on the remote server.
